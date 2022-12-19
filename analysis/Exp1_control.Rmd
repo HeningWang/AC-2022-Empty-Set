@@ -1,0 +1,194 @@
+---
+title: "Exp_1_inferential_control"
+author: "Nadine Balbach"
+date: "9/7/2022"
+output: html_document
+---
+
+
+# Include relevant packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("devtools")
+# install.packages("cli")
+# library(cli)
+#devtools::install_github("dosc91/SfL", upgrade_dependencies = TRUE)
+# install.packages("cli")
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(trimr)
+library(lme4)
+library(lmerTest)
+#library(sjPlot)
+library(Rmisc)
+library(dplyr)
+library(ggbreak)
+library(reshape2)
+library(stringr)
+library(rlang)
+library(naniar)
+library(LMERConvenienceFunctions)
+library(betareg)
+#library(SfL)
+#library(performance)
+
+```
+
+## import functions, set plot directory, clear global environment
+```{r}
+rm(list=ls())
+#tiny bug concerning return value fixed in sdTrim from trimr
+#TODO: maybe use devtools
+source("sdTrimBugFixed.R")
+plots_dir<- file.path(getwd(),"plots")
+if(!dir.exists(plots_dir)) dir.create(plots_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+### load data
+```{r}
+load("trimmedData.RData")
+
+```
+### descriptive statistics for rts
+```{r}
+rt_aggregated<-aggregate(resid_rt~quantifier, data=trimmed_data_exp1_judge_control_only, mean)
+ses_rt<-aggregate(resid_rt~quantifier, data=trimmed_data_exp1_judge_control_only, function(x) {sd(x)/sqrt(length(x))})
+rt_aggregated<-cbind(rt_aggregated,ses_rt[,2])
+```
+### descriptive statistics for acc
+```{r}
+control_agg_acc <- aggregate(correct~quantifier+model, data=trimmed_data_exp1_judge_control_only, function(x) {c(sum(x),length(x),100*mean(x),100*sd(x)/sqrt(length(x)))})
+control_agg_acc
+```
+
+### inferential statistics
+### judgements with logit mixed effect regression analysis (glmer - binomial logit - NB: step function not available!)
+
+## prep data
+```{r}
+trimmed_data_exp1_judge_control_only$quantifier <- as.factor(trimmed_data_exp1_judge_control_only$quantifier)
+trimmed_data_exp1_judge_control_only$quantifier <- relevel(trimmed_data_exp1_judge_control_only$quantifier, "at_most_one")
+```
+### glmer analysis
+```{r}
+glmer_exp1_control_global <- glmer(correct ~ quantifier + (quantifier | participant_id) + (quantifier|item), data = trimmed_data_exp1_judge_control_only, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+#boundary (singular) fit: see help('isSingular')
+
+summary(glmer_exp1_control_global)
+#quantifier no compared to reference level highly significant, no other significance
+
+glmer_exp1_control_global_m0 <- glmer(correct ~ (quantifier | participant_id) + (quantifier|item), data = trimmed_data_exp1_judge_control_only, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+#boundary (singular) fit: see help('isSingular')
+
+anova(glmer_exp1_control_global, glmer_exp1_control_global_m0)
+#with quantifier significantly better
+```
+
+### check for best random interecept
+```{r}
+
+# check whether item as random effect makes a difference
+nullGlmermdl_control<-glmer(correct~ (1|participant_id) + (1 |item), data = trimmed_data_exp1_judge_control_only,family = binomial(link = "logit"))
+null2Glmermdl_control<-glmer(correct~ (1|participant_id), data = trimmed_data_exp1_judge_control_only, family = binomial(link = "logit"))
+anova(nullGlmermdl_control, null2Glmermdl_control)
+
+# could leave out item in random effects structure
+
+```
+
+### glmer analysis without item
+```{r}
+glmer_exp1_control_global2 <- glmer(correct ~ quantifier + (quantifier | participant_id), data = trimmed_data_exp1_judge_control_only, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+#boundary (singular) fit: see help('isSingular')
+
+summary(glmer_exp1_control_global2)
+#quantifier 'no' compared to reference level highly significant, no other significance, but tendency for exactly one
+
+glmer_exp1_control_global_m02 <- glmer(correct ~ (quantifier | participant_id), data = trimmed_data_exp1_judge_control_only, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+#boundary (singular) fit: see help('isSingular')
+
+anova(glmer_exp1_control_global2, glmer_exp1_control_global_m02)
+#with quantifier highly significantly better
+```
+
+##picture RT
+
+### distribution Check (NB: do we have to account for the missing values in resid_rt?)
+
+```{r}
+
+
+shapiro.test(trimmed_data_exp1_judge_control_only$resid_rt)
+# nicht normalverteilt
+trimmed_data_exp1_judge_control_only$logResidRT <- log(trimmed_data_exp1_judge_control_only$resid_rt)
+#NaNs produced
+shapiro.test(trimmed_data_exp1_judge_control_only$logResidRT)
+#immer noch nicht normalverteilt
+
+plot(density(trimmed_data_exp1_judge_control_only$resid_rt))
+#plot(density(trimmed_data_exp1_judge_control_only$logResidRT))
+#Error in density.default(trimmed_data_exp1_judge_control_only$logResidRT) : 'x' contains missing values
+
+```
+
+###full model
+```{r}
+full_lmerMdl_control <- lmer(resid_rt ~ quantifier + (quantifier | participant_id) + (quantifier|item), data = trimmed_data_exp1_judge_control_only, REML = FALSE)
+#boundary (singular) fit: see help('isSingular')
+```
+
+### check whether item as random effect makes a difference
+```{r}
+
+nullcontrol_Lmermdl<-lmer(resid_rt~ (1|participant_id) + (1 |item), data = trimmed_data_exp1_judge_control_only, REML = FALSE)
+              
+null2_control_Lmermdl<-lmer(resid_rt~ (1|participant_id), data = trimmed_data_exp1_judge_control_only, REML = FALSE)
+anova(nullcontrol_Lmermdl, null2_control_Lmermdl)
+
+# could leave out item in random effects structure
+```
+
+
+#find best model
+```{r}
+
+# full model without item
+full_lmerMdl_control <- lmer(resid_rt ~ quantifier + (quantifier | participant_id), data = trimmed_data_exp1_judge_control_only, REML = FALSE)
+#boundary (singular) fit: see help('isSingular')
+step(full_lmerMdl_control)
+
+#best model: resid_rt ~ quantifier + (1 | participant_id)
+trimmed_data_exp1_judge_control_only <- within(trimmed_data_exp1_judge_control_only, quantifier <- relevel(quantifier, ref = "no"))
+#continuing with best model
+best_lmerMdl_control <- lmer(resid_rt ~ quantifier + (1| participant_id), data = trimmed_data_exp1_judge_control_only, REML = FALSE)
+
+summary(best_lmerMdl_control)
+
+#slight effect for at_least_one vs. at_most_one?
+```
+
+### check homoscedasticity
+#### not met, run a Welch t-statistic
+```{r}
+var.test(trimmed_data_exp1_judge_control_only$resid_rt, trimmed_data_exp1_judge_excl_control$resid_rt)
+```
+
+### t test
+
+```{r}
+t_test  <- t.test(trimmed_data_exp1_judge_control_only$resid_rt, trimmed_data_exp1_judge_excl_control$resid_rt,var.equal = FALSE)
+t_test$estimate + t_test$conf.int[1]
+t_test$estimate - t_test$conf.int[1]
+```
+
+### model comparison
+```{r}
+full_lmerMdl_control <- lmer(resid_rt ~ quantifier + (quantifier | participant_id), data = trimmed_data_exp1_judge_control_only, REML = FALSE)
+full_lmerMdl_control_m0 <- lmer(resid_rt ~ 1 + (quantifier | participant_id), data = trimmed_data_exp1_judge_control_only, REML = FALSE)
+```
+```{r}
+anova(full_lmerMdl_control,full_lmerMdl_control_m0)
+```
+
+

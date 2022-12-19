@@ -1,0 +1,306 @@
+---
+title: "Exp_1_descriptive"
+author: "Nadine Balbach"
+date: "9/1/2022"
+output: html_document
+---
+
+
+# Include relevant packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("devtools")
+# install.packages("cli")
+library(cli)
+# devtools::install_github("dosc91/SfL", upgrade_dependencies = TRUE)
+# install.packages("cli")
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(trimr)
+library(lme4)
+library(lmerTest)
+library(dplyr)
+library(ggbreak)
+library(Rmisc)
+library(reshape2)
+library(stringr)
+library(rlang)
+library(naniar)
+library(LMERConvenienceFunctions)
+library(betareg)
+#library(SfL)
+library(performance)
+#library(sjPlot)
+```
+
+## import functions, set plot directory, clear global environment
+```{r}
+rm(list=ls())
+#tiny bug concerning return value fixed in sdTrim from trimr
+#TODO: maybe use devtools
+source("sdTrimBugFixed.R")
+source("appendRdata.R")
+plots_dir<- file.path(getwd(),"plots")
+if(!dir.exists(plots_dir)) dir.create(plots_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+
+### load data
+```{r}
+load("trimmedData.RData")
+
+```
+
+### name quantifiers, Exp1
+```{r}
+trimmed_data_exp1 <- trimmed_data_exp1 %>% 
+  mutate(quantifier = case_when(cond == 2 | cond == 6 | cond == 10 | cond == 14 ~ "no",
+                                   cond == 4 | cond == 8 | cond == 12 | cond == 16 ~ "at_most_one",
+                                   cond == 1 | cond == 5 | cond == 9 | cond == 13 ~ "exactly_one",
+                                   cond == 3 | cond == 7 | cond == 11 | cond == 15 ~ "at_least_one"))
+```
+
+### name empty set property, Exp1
+```{r}
+trimmed_data_exp1 <- trimmed_data_exp1 %>% 
+  mutate(empty_set = case_when(cond == 2 | cond == 6 | cond == 10 | cond == 14 ~ "es",
+                                   cond == 4 | cond == 8 | cond == 12 | cond == 16 ~ "es",
+                                   cond == 1 | cond == 5 | cond == 9 | cond == 13 ~ "non_es",
+                                   cond == 3 | cond == 7 | cond == 11 | cond == 15 ~ "non_es"))
+```
+
+### name quantifier classes, Exp1 
+```{r}
+
+trimmed_data_exp1 <- trimmed_data_exp1 %>% 
+  mutate(quantifier_type = case_when(cond == 2 | cond == 6 | cond == 10 | cond == 14 ~ "non-degree",
+                                cond == 4 | cond == 8 | cond == 12 | cond == 16 ~ "degree",
+                                cond == 1 | cond == 5 | cond == 9 | cond == 13 ~ "non-degree",
+                                cond == 3 | cond == 7 | cond == 11 | cond == 15 ~ "degree"))
+```
+
+### encode models
+```{r}
+trimmed_data_exp1$model <- ifelse(trimmed_data_exp1$model == "1", "0,n",
+                                        ifelse(trimmed_data_exp1$model == "1,1", "1,n", 
+                                               ifelse(trimmed_data_exp1$model == "1,2", "2,n",
+                                                      ifelse(trimmed_data_exp1$model == "0,1", "0,m 1,n",
+                                                             ifelse(trimmed_data_exp1$model == "0", "0,m 0,n", "0,m 2,n")))))
+```
+
+
+
+
+### descriptive stats judgements, Exp 1
+### estimate random effect and compute pseudo residuals
+```{r}
+trimmed_data_fillers_judge <- subset(trimmed_data_fillers, roi=="pictureRT")
+trimmed_data_fillers_judge$quantifier <- str_split(trimmed_data_fillers_judge$sentence, " ", n = 2, simplify = TRUE)[,1]
+appendRData(trimmed_data_fillers_judge, file = "trimmedData.RData")
+
+resp_lmer <- lmer(rt~response+(1+response|participant_id), data=trimmed_data_fillers_judge)
+isSingular(resp_lmer)
+
+#compute pseudo residuals
+trimmed_data_exp1_judge <- subset(trimmed_data_exp1, roi=="pictureRT")
+trimmed_data_exp1_judge$response_num <- ifelse(trimmed_data_exp1_judge$response == "True", 1, 0)
+trimmed_data_exp1_judge$resid_rt <- trimmed_data_exp1_judge$rt - 
+  (ranef(resp_lmer)$participant_id[trimmed_data_exp1_judge$participant_id,1] + 
+     trimmed_data_exp1_judge$response_num *
+     (fixef(resp_lmer)[2]+
+        ranef(resp_lmer)$participant_id[trimmed_data_exp1_judge$participant_id,2])) 
+
+with(trimmed_data_exp1_judge, plot(rt, resid_rt, col = participant_id))
+
+```
+
+### descriptive stats judgement stage, Exp 1
+
+### excluding the 4 controls
+```{r}
+trimmed_data_exp1_judge_excl_control <- subset(trimmed_data_exp1_judge, trimmed_data_exp1_judge$cond < 13)
+
+#controls only
+trimmed_data_exp1_judge_control_only <- subset(trimmed_data_exp1_judge, trimmed_data_exp1_judge$cond > 12)
+
+#save for inferential stats
+appendRData(trimmed_data_exp1_judge_excl_control,
+     file = "trimmedData.RData")
+appendRData(trimmed_data_exp1_judge_control_only,
+     file = "trimmedData.RData")
+```
+
+#### means and CIs
+```{r}
+rt_aggregated<-aggregate(resid_rt~quantifier+model, data=trimmed_data_exp1_judge_excl_control, mean)
+```
+
+#### compute ses
+```{r}
+ses_rt<-aggregate(resid_rt~quantifier+model, data=trimmed_data_exp1_judge_excl_control, function(x) {sd(x)/sqrt(length(x))})
+rt_aggregated<-cbind(rt_aggregated,ses_rt[,3])
+```
+
+
+
+#### names, labels, encoding...
+```{r}
+names(rt_aggregated)<-c("quantifier", "model", "pictureRT", "se")
+#rt_aggregated$roi<-as.factor(rt_aggregated$roi)
+rt_aggregated$model<-as.factor(rt_aggregated$model)
+```
+
+
+#### do a plot of the RTs
+```{r}
+gp_rt <- ggplot(rt_aggregated, aes(x=quantifier, y=pictureRT, fill=model, group=model))+
+  geom_col(position = "dodge")+ geom_errorbar(aes(ymin=pictureRT-se, ymax=pictureRT+se), width=.2,
+                 position=position_dodge(.9)) +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1), text = element_text(size=20))+
+  #theme(axis.text.x = element_blank())+
+  #ylim(210, 420)+
+  ylab("reading time in ms\n(and std. errors)")+
+  #scale_x_discrete(labels=c("Außer dem markierten","ist","QUANTIFIER","weiteres", "Dreieck","rot."))+
+  #theme(legend.position = c(0.68, 0.85), legend.title = element_blank())+
+  theme(axis.title=element_text(size=16,face="bold"))#+
+  #facet_grid(~model)
+gp_rt
+ggsave(file.path(plots_dir,"mean_judgment_rt_exp1.pdf"), device="pdf", width=14, height=5)
+```
+
+### accuracy by quant and model 
+```{r}
+## accuracy per condition absolute (N correct trials and total N of trials) 
+## and relative in percent (means and standard errors of the mean)
+agg_acc <- aggregate(correct~quantifier+model, data=trimmed_data_exp1_judge_excl_control, function(x) {c(sum(x),length(x),100*mean(x),100*sd(x)/sqrt(length(x)))})
+agg_acc
+
+## acc for controls
+control_agg_acc <- aggregate(correct~quantifier+model, data=trimmed_data_exp1_judge_control_only, function(x) {c(sum(x),length(x),100*mean(x),100*sd(x)/sqrt(length(x)))})
+control_agg_acc
+
+```
+
+### GLMER analysis judgments
+
+```{r}
+# sum coding of factors
+trimmed_data_exp1_judge_excl_control$empty_set <- as.factor(trimmed_data_exp1_judge_excl_control$empty_set)
+trimmed_data_exp1_judge_excl_control$quantifier_type <- as.factor(trimmed_data_exp1_judge_excl_control$quantifier_type)
+trimmed_data_exp1_judge_excl_control$model <- as.factor(trimmed_data_exp1_judge_excl_control$model)
+
+contrasts(trimmed_data_exp1_judge_excl_control$empty_set) =contr.sum(2)
+contrasts(trimmed_data_exp1_judge_excl_control$quantifier_type) =contr.sum(2)
+contrasts(trimmed_data_exp1_judge_excl_control$model) =contr.sum(3)
+
+glmer_exp1_global <- glmer(correct ~ empty_set*quantifier_type*model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_global)
+
+glmer_exp1_global_m0 <- glmer(correct ~ empty_set*quantifier_type+empty_set*model + quantifier_type*model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+anova(glmer_exp1_global, glmer_exp1_global_m0)
+
+## break down three-way interaction effects: separate analyses for degree and non-degree quantifiers
+
+trimmed_data_exp1_judge_excl_control_degree <- subset(trimmed_data_exp1_judge_excl_control, quantifier_type == "degree")
+
+trimmed_data_exp1_judge_excl_control_non_degree <- subset(trimmed_data_exp1_judge_excl_control, quantifier_type == "non-degree")
+
+## degree quantifiers: sign. two-way interactions
+
+glmer_exp1_degree <- glmer(correct ~ empty_set*model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_degree)
+
+glmer_exp1_degree_m0 <- glmer(correct ~ empty_set+model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+anova(glmer_exp1_degree,glmer_exp1_degree_m0)
+
+## non-degree quantifiers: no sign. differences except for the first two-way interaction
+
+glmer_exp1_non_degree <- glmer(correct ~ empty_set*model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_non_degree)
+
+glmer_exp1_non_degree_m0 <- glmer(correct ~ empty_set+model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+anova(glmer_exp1_non_degree,glmer_exp1_non_degree_m0)
+```
+
+### LMER analysis judgment RTs
+
+```{r}
+## no three-way interaction for judgment RTs
+
+lmer_exp1_judge_rt_global_m1 <- lmer(resid_rt ~ empty_set*quantifier_type*model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control, REML = FALSE)
+
+lmer_exp1_judge_rt_global_m2 <- lmer(resid_rt ~ empty_set*quantifier_type+empty_set*model + quantifier_type*model  + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control, REML = FALSE)
+
+anova(lmer_exp1_judge_rt_global_m1,lmer_exp1_judge_rt_global_m2)
+
+summary(lmer_exp1_judge_rt_global_m2)
+
+## sign. two-way interactions between empty-set quantifiers and models: 
+## empty-set quantifiers differ from non-empty-set quantifiers with respect 
+## to 0-models but show similar RTs for 1- and 2-models
+
+lmer_exp1_judge_rt_global_m3 <- lmer(resid_rt ~ empty_set*quantifier_type + quantifier_type*model  + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control, REML = FALSE)
+
+anova(lmer_exp1_judge_rt_global_m2,lmer_exp1_judge_rt_global_m3)
+```
+
+### descriptive stats reading stage, Exp 1
+
+#### means and CIs
+```{r}
+trimmed_data_exp1_read <- subset(trimmed_data_exp1, roi!="pictureRT")
+trimmed_data_exp1_read_excl_control <- subset(trimmed_data_exp1_read, trimmed_data_exp1_read$cond < 13)
+trimmed_data_exp1_read_control_only <- subset(trimmed_data_exp1_read, trimmed_data_exp1_read$cond > 12)
+
+
+### do rt residuals here as well?
+#save for inferential stats
+appendRData(trimmed_data_exp1_read_excl_control,
+     file = "trimmedData.RData")
+appendRData(trimmed_data_exp1_read_control_only,
+     file = "trimmedData.RData")
+
+rt_aggregated<-aggregate(rt~quantifier+roi, data=trimmed_data_exp1_read_excl_control, mean)
+```
+
+
+### TODO: find another way to compute ses (SEwithin?)
+```{r}
+ses_rt<-aggregate(rt~quantifier+roi, data=trimmed_data_exp1_read_excl_control, function(x) {sd(x)/sqrt(length(x))})
+rt_aggregated<-cbind(rt_aggregated,ses_rt[,3])
+```
+
+#### names, labels, encoding...
+```{r}
+names(rt_aggregated)<-c("quantifier", "roi", "sentenceRT", "se")
+rt_aggregated$roi<-as.factor(rt_aggregated$roi)
+```
+
+
+### do a plot of the sentence RTs
+```{r}
+plots_dir<- file.path(getwd(),"plots")
+if(!dir.exists(plots_dir)) dir.create(plots_dir, recursive = TRUE, showWarnings = FALSE)
+
+gp_rt <- ggplot(rt_aggregated, aes(x=roi, y=sentenceRT, colour=quantifier, group=quantifier))+
+  geom_line()+ geom_point()+
+  geom_ribbon(aes(ymin=sentenceRT-se, ymax=sentenceRT+se), linetype=0, alpha=0.1)+
+  theme(axis.text.x = element_text(angle = 35, hjust = 1), text = element_text(size=20))+
+  #theme(axis.text.x = element_blank())+
+  #ylim(210, 420)+
+  ylab("reading time in ms\n(and std. errors)")+
+  scale_x_discrete(labels=c("Außer dem markierten","ist","QUANTIFIER","weiteres", "Dreieck","rot."))+
+  #theme(legend.position = c(0.68, 0.85), legend.title = element_blank())+
+  theme(axis.title=element_text(size=16,face="bold"))
+gp_rt
+ggsave(file.path(plots_dir,"mean_sentence_rt_exp1.pdf"), device="pdf", width=28, height=5)
+```
+
+

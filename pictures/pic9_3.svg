@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="517pt" height="517pt" viewBox="0 0 517 517" version="1.1">
+<g id="surface651">
+<rect x="0" y="0" width="517" height="517" style="fill:rgb(90%,90%,90%);fill-opacity:1;stroke:none;"/>
+<path style="fill:none;stroke-width:5;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(100%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 261 5 L 517 5 L 517 261 L 261 261 Z M 261 5 "/>
+<path style="fill-rule:nonzero;fill:rgb(100%,100%,0%);fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 354.6875 82.484375 C 354.6875 68.085938 330.6875 68.085938 330.6875 82.484375 C 330.6875 96.882812 354.6875 99.285156 354.6875 111.285156 C 354.6875 99.285156 378.6875 96.882812 378.6875 82.484375 C 378.6875 68.085938 354.6875 68.085938 354.6875 82.484375 "/>
+<path style="fill-rule:nonzero;fill:rgb(67%,100%,18%);fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 123.609375 411.597656 C 123.609375 397.199219 99.609375 397.199219 99.609375 411.597656 C 99.609375 426 123.609375 428.398438 123.609375 440.398438 C 123.609375 428.398438 147.609375 426 147.609375 411.597656 C 147.609375 397.199219 123.609375 397.199219 123.609375 411.597656 "/>
+<path style="fill-rule:nonzero;fill:rgb(67%,100%,18%);fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 45.890625 39.148438 C 45.890625 24.75 21.890625 24.75 21.890625 39.148438 C 21.890625 53.550781 45.890625 55.949219 45.890625 67.949219 C 45.890625 55.949219 69.890625 53.550781 69.890625 39.148438 C 69.890625 24.75 45.890625 24.75 45.890625 39.148438 "/>
+<path style="fill-rule:nonzero;fill:rgb(67%,100%,18%);fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 125.003906 32.605469 C 125.003906 18.207031 101.003906 18.207031 101.003906 32.605469 C 101.003906 47.007812 125.003906 49.40625 125.003906 61.40625 C 125.003906 49.40625 149.003906 47.007812 149.003906 32.605469 C 149.003906 18.207031 125.003906 18.207031 125.003906 32.605469 "/>
+</g>
+</svg>

@@ -1,0 +1,371 @@
+---
+title: "Empty-set experiment prep"
+author: "Nadine Balbach, Fabian Schlotterbeck, Hening Wang, Oliver Bott"
+date: "8/9/2022"
+output: html_document
+---
+# Include relevant packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("devtools")
+# install.packages("cli")
+library(cli)
+#devtools::install_github("dosc91/SfL", upgrade_dependencies = TRUE)
+# install.packages("cli")
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(trimr)
+library(lme4)
+library(lmerTest)
+library(sjPlot)
+library(dplyr)
+library(ggbreak)
+library(Rmisc)
+library(reshape2)
+library(stringr)
+library(rlang)
+library(naniar)
+library(LMERConvenienceFunctions)
+library(betareg)
+#library(SfL)
+library(performance)
+
+```
+
+## Meeting 09.08.22
+
+# Preprocessing (Hening und Oliver): 
+## import data from .csv
+```{r}
+rm(list=ls())
+#tiny bug concerning return value fixed in sdTrim from trimr
+#TODO: maybe use devtools
+source("sdTrimBugFixed.R")
+
+plots_dir<- file.path(getwd(),"plots")
+if(!dir.exists(plots_dir)) dir.create(plots_dir, recursive = TRUE, showWarnings = FALSE)
+
+subj_info <- read.csv(file = file.path("..", "data", "kammertenberg_subj_info.csv"))
+
+data <- read.csv(file = file.path("..", "data", "kammertenberg_preprocessed.csv"))
+
+```
+
+## some basic information about data
+### show how many pps
+```{r}
+sum(xtabs(~participant_id, data=data)/148)
+```
+### show how many trials each pp has done
+```{r}
+xtabs(~participant_id, data)
+```
+### show conds
+```{r}
+round(xtabs(~condition,data)/80)
+```
+### show missing reading times (FS: not sure what's happening from here...)
+```{r}
+xtabs(~data$time.out=="1",data)
+```
+### take a closer look to those missing data
+```{r}
+xtabs(~data$prolific_id[which(data$time.out=="1")], data)
+
+# "62ee849689993" 8 times; "62eff8392735b" 3 times; the others are around 1 or 2 times
+# probably because of a technical problem that also happened before: the columns were slipped due to missing list information 
+```
+### exclude participant that had a time out 8 times (was the one who saw mostly blank pages)
+```{r}
+exclude <- "62ee849689993"
+```
+
+
+### mark all time out data as NA
+```{r}
+data$read_time[which(data$time.out=="1")] <- NA
+xtabs(~is.na(data$read_time),data)
+```
+### remove NA values (FS:...until here)
+```{r}
+data <- subset(data, !is.na(data$read_time))
+```
+
+
+### remove NA values (FS: TODO: where do these cases come from (below))
+```{r}
+nrow(subset(data, is.na(data$participant_id)))
+data <- subset(data, !is.na(data$participant_id))
+```
+
+
+### show average processing time for experiments
+```{r}
+hist(subj_info$time_in_minutes, main = "Processing time of experiments", xlab = "processing time in mins")
+mean(subj_info$time_in_minutes) # N = 23.06
+sd(subj_info$time_in_minutes)   # SD = 11.51
+```
+### show pps more/less then two SD away from mean
+```{r}
+distance <- 3
+x <- mean(subj_info$time_in_minutes) + distance * sd(subj_info$time_in_minutes)
+y <- mean(subj_info$time_in_minutes) - distance * sd(subj_info$time_in_minutes)
+filter(subj_info, time_in_minutes < y | time_in_minutes > x)
+(exclude <- append(exclude, filter(subj_info, time_in_minutes < y | time_in_minutes > x)$id))
+# "62ed962bc51f0", one pp with 87.92 mins was three SD away from mean
+# "62ed97136512b" 52.05 mins, "62ee2353c7589" 46.72 mins, maybe three SD away better?
+```
+
+### histogram of how many of the (in percent) participants have 16, 17, 18, 19, 20 of the real Filler (6500-8400) correct
+```{r}
+data$item <- as.numeric(data$item)
+data_false <- filter(data, correct == 0 & item >= 6500)
+percentage_false_judgement <- xtabs(~prolific_id,data_false)/20
+hist(percentage_false_judgement, main = "Frequency of percentages of false judgements in verification trials", xlab = "percentage of false judgements")
+```
+
+### show how many pps are excluded under a given cut-off point
+```{r}
+cutoff90 <- 0.1
+cutoff85 <- 0.15
+cutoff80 <- 0.2
+sum(percentage_false_judgement>cutoff80)
+# 29 under 90% cut-off  (NB - now 13?)
+# 5 under 80% cut-off
+exclude <- append(exclude, names(which(percentage_false_judgement>cutoff80)))
+```
+
+
+### melt data in table for plot
+```{r}
+colnames(data)
+melt_data <- melt(data,id=c(1:11,13:16), measure.vars=c(12,21:26), variable.name="roi", value.name="rt")
+
+# to avoid conflict with trimr
+melt_data$cond <- melt_data$condition
+```
+
+### identify and exclude trials with extremely long reading times
+```{r}
+melt_data_read <- subset(melt_data, roi!= "pictureRT" & !is.na(melt_data$rt))#TODO: move up?
+with(melt_data_read, plot(rt, col=participant_id))
+cutoff_ex_rt <- 15000
+ex_rt <- melt_data_read[melt_data_read$rt>cutoff_ex_rt | melt_data_read$rt< 0,][c("prolific_id", "trial")]
+key <- c("prolific_id", "trial")
+melt_data<-  melt_data[!interaction(melt_data[key]) %in% interaction(ex_rt[key]),]
+```
+
+### remove excluded pps 
+```{r}
+melt_data <- subset(melt_data, !(prolific_id %in% exclude))
+#with(melt_data, plot(sentenceRT, col=participant_id))
+```
+### check how many pps remained
+```{r}
+length(unique(melt_data$participant_id))
+```
+
+
+### use trimr to trim sentence rt
+```{r}
+trimmed_data <- melt_data
+trimmed_data$participant <- trimmed_data$participant_id
+trimmed_data$condition <- as.factor(paste(trimmed_data$subexperiment,trimmed_data$roi))
+trimmed_data$accuracy <- 1 #(accuracy only because trimr needs this colmun name to function)
+
+
+trimmed_data <- sdTrimBugFixed(data = trimmed_data, minRT = 150, sd = 2.5, 
+                       perCondition = TRUE, perParticipant = TRUE,
+                       omitErrors = FALSE, returnType = "raw", digits = 0)
+
+```
+
+### convert to factor
+```{r}
+trimmed_data$participant_id <- droplevels(as.factor(trimmed_data$participant_id))
+```
+
+
+
+### subset experiments items from filler items 
+```{r}
+trimmed_data_exp1 <- subset(trimmed_data, subexperiment == 1)
+trimmed_data_exp2 <- subset(trimmed_data, subexperiment == 2)
+trimmed_data_exp3 <- subset(trimmed_data, subexperiment == 3)
+trimmed_data_fillers <- subset(trimmed_data, !(subexperiment %in% c(1,2,3)))
+
+
+```
+
+##Exp1
+### name quantifier types, Exp1
+```{r}
+trimmed_data_exp1 <- trimmed_data_exp1 %>% 
+  mutate(quantifier = case_when(cond == 2 | cond == 6 | cond == 10 | cond == 14 ~ "no",
+                                   cond == 4 | cond == 8 | cond == 12 | cond == 16 ~ "at_most_one",
+                                   cond == 1 | cond == 5 | cond == 9 | cond == 13 ~ "exactly_one",
+                                   cond == 3 | cond == 7 | cond == 11 | cond == 15 ~ "at_least_one"))
+```
+
+### name quantifier classes, Exp1 
+```{r}
+
+trimmed_data_exp1 <- trimmed_data_exp1 %>% 
+  mutate(degree_quantifier = case_when(cond == 2 | cond == 6 | cond == 10 | cond == 14 ~ "no",
+                                cond == 4 | cond == 8 | cond == 12 | cond == 16 ~ "yes",
+                                cond == 1 | cond == 5 | cond == 9 | cond == 13 ~ "no",
+                                cond == 3 | cond == 7 | cond == 11 | cond == 15 ~ "yes"))
+```
+
+
+### change empty_set_quantifier label
+```{r}
+trimmed_data_exp1$empty_set_quantifier <- ifelse(trimmed_data_exp1$empty_set_quantifier == "1", "yes", "no")
+```
+
+
+### descriptive stats judgements, Exp 1
+### estimate random effect and compute pseudo residuals
+```{r}
+trimmed_data_fillers_judge <- subset(trimmed_data_fillers, roi=="pictureRT")
+trimmed_data_fillers_judge$quantifier <- str_split(trimmed_data_fillers_judge$sentence, " ", n = 2, simplify = TRUE)[,1]
+
+trimmed_data_fillers_read <- subset(trimmed_data_fillers, roi!="pictureRT")
+trimmed_data_fillers_read$quantifier <- str_split(trimmed_data_fillers_read$sentence, " ", n = 2, simplify = TRUE)[,1]
+
+
+resp_lmer <- lmer(rt~response+(1+response|participant_id), data=trimmed_data_fillers_judge)
+isSingular(resp_lmer) #(NB: should we deal with the singularity?)
+
+#compute pseudo residuals
+trimmed_data_exp1_judge <- subset(trimmed_data_exp1, roi=="pictureRT")
+trimmed_data_exp1_judge$response_num <- ifelse(trimmed_data_exp1_judge$response == "True", 1, 0)
+trimmed_data_exp1_judge$resid_rt <- trimmed_data_exp1_judge$rt - 
+  trimmed_data_exp1_judge$response_num *
+     (fixef(resp_lmer)[2]+
+        ranef(resp_lmer)$participant_id[trimmed_data_exp1_judge$participant_id,2])
+#the follwoing leads to negative resid_rt difficult for log transformation
+#trimmed_data_exp1_judge$resid_rt <- trimmed_data_exp1_judge$rt - 
+#  (ranef(resp_lmer)$participant_id[trimmed_data_exp1_judge$participant_id,1] + 
+#     trimmed_data_exp1_judge$response_num *
+#     (fixef(resp_lmer)[2]+
+#        ranef(resp_lmer)$participant_id[trimmed_data_exp1_judge$participant_id,2])) 
+```
+
+### encode models
+
+```{r}
+trimmed_data_exp1_judge$model_judge <- ifelse(trimmed_data_exp1_judge$model == "1", "0-model",
+                                        ifelse(trimmed_data_exp1_judge$model == "1,1", "1-2-model", 
+                                               ifelse(trimmed_data_exp1_judge$model == "1,2", "1-2-model",
+                                                      ifelse(trimmed_data_exp1_judge$model == "0,1", "1-2-model",
+                                                             ifelse(trimmed_data_exp1_judge$model == "0", "0-model", "1-2-model")))))
+```
+
+```{r}
+trimmed_data_exp1_judge$model <- ifelse(trimmed_data_exp1_judge$model == "1", "0-model",
+                                        ifelse(trimmed_data_exp1_judge$model == "1,1", "1-model", 
+                                               ifelse(trimmed_data_exp1_judge$model == "1,2", "2-model",
+                                                      ifelse(trimmed_data_exp1_judge$model == "0,1", "1-model",
+                                                             ifelse(trimmed_data_exp1_judge$model == "0", "0-model", "2-model")))))
+```
+### excluding the 4 controls
+```{r}
+trimmed_data_exp1_judge_excl_control <- subset(trimmed_data_exp1_judge, trimmed_data_exp1_judge$cond < 13)
+#na.exclude(trimmed_data_exp1_judge_excl_control) (NB: vermutlich hier nicht relevant?)
+
+#controls only
+trimmed_data_exp1_judge_control_only <- subset(trimmed_data_exp1_judge, trimmed_data_exp1_judge$cond > 12)
+```
+
+## descriptive stats reading, Exp 1
+
+```{r}
+trimmed_data_exp1_read <- subset(trimmed_data_exp1, roi!="pictureRT")
+```
+
+
+
+```{r}
+trimmed_data_exp1_read_excl_control <- subset(trimmed_data_exp1_read, trimmed_data_exp1_read$cond < 13)
+trimmed_data_exp1_read_control_only <- subset(trimmed_data_exp1_read, trimmed_data_exp1_read$cond > 12)
+
+```
+
+
+### saving all
+```{r}
+save(trimmed_data_exp1,trimmed_data_exp2,trimmed_data_exp3,trimmed_data_fillers, trimmed_data_fillers_judge,trimmed_data_fillers_read, trimmed_data_exp1_judge, trimmed_data_exp1_judge_excl_control, trimmed_data_exp1_judge_control_only, trimmed_data_exp1_read, trimmed_data_exp1_read_excl_control, trimmed_data_exp1_read_control_only, 
+     file = "trimmedData.RData")
+```
+
+### TODO: split file here to analyze subexperiments separately
+```{r}
+load("trimmedData.RData")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#1st steps:
+# merge all participants into one dataframe - done with the python skript in R
+
+# extract the different reading times from string format to new columns (one column for each region)
+# -> Hening will adapt his R skript for that
+# critical regions will be the last region for every item
+
+# Excluding participants
+# do a histogram how many of the (in percent) participants have 16, 17, 18, 19, 20 of the real Filler (6500-8400) correct
+# depending on that we choose to exclude partcipants that have at least 80%, 85% or 90% of these fillers correct
+#90% only if we don't loose more than 20% of the data (we could get 20 percent more data)
+
+# Overall processing time
+# we agreed to have a look at those that took very long 
+# but in general want to concentrate on excluding with the real Filler
+
+
+#handing over to Nadine 22nd of August
+
+#Analysis
+
+# we want to look at all reading time regions at first and then focus especially on the critical region and the one before
+
+#judgements with logit mixed effect regression analysis (glm - binomial logit)
+#latencies (log transformed) with (g)lmer
+# check picture verification times
+# do seperate analysis - one for all picture verification times, one for those with correct response, one for those with wrong responses
+#we should chekc wheter there is actually an effect with random interecepts of items - otherwise we could leave it out (there is no real item difference)
+

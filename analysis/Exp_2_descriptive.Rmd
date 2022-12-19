@@ -1,0 +1,209 @@
+---
+title: "Exp_2_descriptive"
+author: "Nadine Balbach"
+date: "9/1/2022"
+output: html_document
+---
+
+
+# Include relevant packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("devtools")
+# install.packages("cli")
+library(cli)
+devtools::install_github("dosc91/SfL", upgrade_dependencies = TRUE)
+# install.packages("cli")
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(trimr)
+library(lme4)
+library(lmerTest)
+library(sjPlot)
+library(dplyr)
+library(ggbreak)
+library(Rmisc)
+library(reshape2)
+library(stringr)
+library(rlang)
+library(naniar)
+library(LMERConvenienceFunctions)
+library(betareg)
+library(SfL)
+library(performance)
+
+```
+
+## import functions, set plot directory, clear global environment
+```{r}
+rm(list=ls())
+#tiny bug concerning return value fixed in sdTrim from trimr
+#TODO: maybe use devtools
+source("sdTrimBugFixed.R")
+source("appendRdata.R")
+plots_dir<- file.path(getwd(),"plots")
+if(!dir.exists(plots_dir)) dir.create(plots_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+### load data
+```{r}
+load("trimmedData.RData")
+```
+
+### descriptive stats judgements, Exp 2
+
+### add correct es-quantifier labeling and model info
+
+```{r}
+trimmed_data_exp2 <- trimmed_data_exp2 %>% 
+  mutate(empty_set_quantifier = case_when(cond == 1 | cond == 2 | cond == 3 | cond == 4 ~ "yes",
+                                cond == 5 | cond == 6 | cond == 7 | cond == 8 ~ "no"))
+```
+
+### add model and quantifier labeling
+```{r}
+trimmed_data_exp2$model <- ifelse(trimmed_data_exp2$cond %in% c(1,5), "0,n",
+                                        ifelse(trimmed_data_exp2$cond %in% c(2,6),"1,n",
+                                                ifelse(trimmed_data_exp2$cond %in% c(3,7),"2,n", "3,n")))
+
+trimmed_data_exp2$quantifier <- ifelse(trimmed_data_exp2$cond %in% c(1:4), "at_most_two", "exactly_two")
+```
+
+#### estimate random effect and compute pseudo residuals
+```{r}
+#compute pseudo residuals
+trimmed_data_exp2_judge <- subset(trimmed_data_exp2, roi=="pictureRT")
+
+resp_lmer <- lmer(rt~response+(1+response|participant_id), data=trimmed_data_fillers_judge)
+isSingular(resp_lmer) #(NB: should we deal with the singularity?)
+
+trimmed_data_exp2_judge$response_num <- ifelse(trimmed_data_exp2_judge$response == "True", 1, 0)
+trimmed_data_exp2_judge$resid_rt <- trimmed_data_exp2_judge$rt - 
+  (ranef(resp_lmer)$participant_id[trimmed_data_exp2_judge$participant_id,1] + 
+     trimmed_data_exp2_judge$response_num *
+     (fixef(resp_lmer)[2]+
+        ranef(resp_lmer)$participant_id[trimmed_data_exp2_judge$participant_id,2])) 
+
+with(trimmed_data_exp2_judge, plot(rt, resid_rt, col = participant_id))
+
+appendRData(trimmed_data_exp2_judge,
+     file = "trimmedData.RData")
+
+#TODO: use residuals from exp 1 (+x) instead
+```
+
+
+### accuracy by quant and model 
+```{r}
+agg_acc <- aggregate(correct~quantifier+model, data=trimmed_data_exp2_judge, function(x) {c(mean(x),sd(x)/sqrt(length(x)))})
+agg_acc
+
+# worst for at_most and 0,n -> 0,47 vs. 0,89 and also a difference for 1,n -> 0,71 vs. 0,92
+
+```
+
+
+### means and CIs
+```{r}
+rt_aggregated<-aggregate(resid_rt~quantifier+model, data=trimmed_data_exp2_judge, mean)
+```
+
+#### TODO: find another way to compute ses (SEwithin?)
+```{r}
+ses_rt<-aggregate(resid_rt~quantifier+model, data=trimmed_data_exp2_judge, function(x) {sd(x)/sqrt(length(x))})
+rt_aggregated<-cbind(rt_aggregated,ses_rt[,3])
+```
+
+#### names, labels, encoding...
+```{r}
+rt_aggregated<-cbind(rt_aggregated, agg_acc[,3])
+names(rt_aggregated)<-c("quantifier", "model", "pictureRT", "se", "correct", "wrong")
+#rt_aggregated$roi<-as.factor(rt_aggregated$roi)
+rt_aggregated$model<-as.factor(rt_aggregated$model)
+```
+
+
+#### do a plot of the RTs
+```{r}
+gp_rt <- ggplot(rt_aggregated, aes(x=quantifier, y=pictureRT, fill=model, group=model))+
+  geom_col(position = "dodge")+ geom_errorbar(aes(ymin=pictureRT-se, ymax=pictureRT+se), width=.2,
+                 position=position_dodge(.9)) +
+  geom_text(aes(label = round(correct,digits=2), x=quantifier, y=pictureRT), position = position_dodge(width = .9), vjust = -0.9, size=4, colour= "red")+
+  labs(tag = "accuracy")+
+  theme(axis.text.x = element_text(angle = 35, hjust = 1), text = element_text(size=20))+
+  #theme(axis.text.x = element_blank())+
+  #ylim(210, 420)+
+  ylab("residual reaction time in ms\n(and std. errors)")+
+  #scale_x_discrete(labels=c("Außer dem markierten","ist","QUANTIFIER","weiteres", "Dreieck","rot."))+
+  #theme(legend.position = c(0.68, 0.85), legend.title = element_blank())+
+  theme(axis.title=element_text(size=16,face="bold"))+
+  theme(plot.tag.position=c(.95, .85))+
+  theme(plot.tag= element_text(size=9, colour = "red"))
+  #facet_grid(~model)
+gp_rt
+ggsave(file.path(plots_dir,"mean_judgment_rt_exp2.pdf"), device="pdf", width=14, height=5)
+```
+
+
+
+
+### descriptive stats reading, Exp 2
+
+#### means and CIs
+```{r}
+trimmed_data_exp2_read <- subset(trimmed_data_exp2, roi!="pictureRT")
+trimmed_data_exp2_read_excl_control <- subset(trimmed_data_exp2_read, trimmed_data_exp2_read$cond < 13)
+trimmed_data_exp2_read_control_only <- subset(trimmed_data_exp2_read, trimmed_data_exp2_read$cond > 12)
+
+#save for inferential stats
+appendRData(trimmed_data_exp2_read,
+     file = "trimmedData.RData")
+
+rt_aggregated<-aggregate(rt~quantifier+roi, data=trimmed_data_exp2_read, mean)
+```
+
+
+### TODO: find another way to compute ses (SEwithin?)
+```{r}
+ses_rt<-aggregate(rt~quantifier+roi, data=trimmed_data_exp2_read, function(x) {sd(x)/sqrt(length(x))})
+rt_aggregated<-cbind(rt_aggregated,ses_rt[,3])
+```
+
+#### names, labels, encoding...
+```{r}
+names(rt_aggregated)<-c("quantifier", "roi", "sentenceRT", "se")
+rt_aggregated$roi<-as.factor(rt_aggregated$roi)
+```
+
+
+### do a plot of the sentence RTs
+```{r}
+gp_rt <- ggplot(rt_aggregated, aes(x=roi, y=sentenceRT, colour=quantifier, group=quantifier))+
+  geom_line()+ geom_point()+
+  geom_ribbon(aes(ymin=sentenceRT-se, ymax=sentenceRT+se), linetype=0, alpha=0.1)+
+  theme(axis.text.x = element_text(angle = 35, hjust = 1), text = element_text(size=20))+
+  #theme(axis.text.x = element_blank())+
+  #ylim(210, 420)+
+  ylab("reading time in ms\n(and std. errors)")+
+  scale_x_discrete(labels=c("Außer QUANTIFIER","sind","alle Kreise", "blau.")) +
+  #theme(legend.position = c(0.68, 0.85), legend.title = element_blank())+
+  theme(axis.title=element_text(size=16,face="bold"))
+gp_rt
+ggsave(file.path(plots_dir,"mean_sentence_rt_exp2_1.pdf"), device="pdf", width=28, height=5)
+
+gp_rt <- ggplot(rt_aggregated, aes(x=quantifier, y=sentenceRT, fill=roi, group=roi))+
+  geom_col(position = "dodge")+ geom_errorbar(aes(ymin=sentenceRT-se, ymax=sentenceRT+se), width=.2,
+                 position=position_dodge(.9)) +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1), text = element_text(size=20))+
+  #theme(axis.text.x = element_blank())+
+  #ylim(210, 420)+
+  ylab("reading time in ms\n(and std. errors)")+
+  ####NB: check whether it is actually ms
+  #scale_x_discrete(labels=c("Außer dem markierten","ist","QUANTIFIER","weiteres", "Dreieck","rot."))+
+  #theme(legend.position = c(0.68, 0.85), legend.title = element_blank())+
+  theme(axis.title=element_text(size=16,face="bold"))
+gp_rt
+
+ggsave(file.path(plots_dir,"mean_sentence_rt_exp2_2.pdf"), device="pdf", width=28, height=5)
+```

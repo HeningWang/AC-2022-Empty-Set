@@ -1,0 +1,444 @@
+---
+title: "Exp_2_inferential_stats"
+author: "Nadine Balbach"
+date: "9/1/2022"
+output: html_document
+---
+
+# Include relevant packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("devtools")
+# install.packages("cli")
+library(cli)
+#devtools::install_github("dosc91/SfL", upgrade_dependencies = TRUE)
+# install.packages("cli")
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(trimr)
+library(lme4)
+library(lmerTest)
+library(sjPlot)
+library(dplyr)
+library(ggbreak)
+library(Rmisc)
+library(reshape2)
+library(stringr)
+library(rlang)
+library(naniar)
+library(LMERConvenienceFunctions)
+library(betareg)
+library(SfL)
+library(performance)
+
+```
+
+## import functions, set plot directory, clear global environment
+```{r}
+rm(list=ls())
+#tiny bug concerning return value fixed in sdTrim from trimr
+#TODO: maybe use devtools
+source("sdTrimBugFixed.R")
+source("appendRdata.R")
+plots_dir<- file.path(getwd(),"plots")
+if(!dir.exists(plots_dir)) dir.create(plots_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+### load data
+```{r}
+load("trimmedData.RData")
+
+```
+
+### inferential statistics
+### judgements with logit mixed effect regression analysis (glmer - binomial logit - NB: step function not available!)
+
+## prep data
+```{r}
+trimmed_data_exp2_judge$model <- as.factor(trimmed_data_exp2_judge$model)
+trimmed_data_exp2_judge$empty_set_quantifier <- as.factor(trimmed_data_exp2_judge$empty_set_quantifier)
+```
+
+### full model (NB: check all relevel - missed assigning it)
+```{r}
+
+#make 1,1 the reference level
+trimmed_data_exp2_judge$model <- relevel(trimmed_data_exp2_judge$model, ref = "2,n")
+mdl_full <- glmer(correct ~ empty_set_quantifier*model + (1 | participant_id) + (1 |item), 
+                  data = trimmed_data_exp2_judge, family = binomial(link = "logit"),
+                  glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)))
+
+# try ggplot2::ggplot(), for error: Registered S3 method overwritten by 'htmlwidgets': method           from    print.htmlwidget tools:rstudio
+#rstanarm::stan_glmer(correct ~ quantifier + empty_set_quantifier + quantifier_type + model + (1 | participant_id) + (1|item), data = trimmed_data_exp2_judge, family = binomial(link = "logit"))
+summary(mdl_full)
+```
+
+
+### multicollinearity check
+```{r}
+
+correlation_matrix(data = trimmed_data_exp2_judge,
+                   variables = c("empty_set_quantifier", "model", "participant_id", "item"))
+#no correlation
+check_collinearity(mdl_full)
+col_model <- check_collinearity(mdl_full)
+plot(col_model)
+
+```
+
+
+
+### check for best predictor
+```{r}
+
+predictor_competition(data = trimmed_data_exp2_judge,
+                      dependent = "correct",
+                      independent1 = "empty_set_quantifier",
+                      independent2 = "model",
+                      random.intercept = "participant_id")
+# model would be better predictor
+
+# check whether item as random effect makes a difference
+nullGlmermdl<-glmer(correct~ (1|participant_id) + (1 |item), data = trimmed_data_exp2_judge,family = binomial(link = "logit"))
+null2Glmermdl<-glmer(correct~ (1|participant_id), data = trimmed_data_exp2_judge, family = binomial(link = "logit"))
+anova(nullGlmermdl, null2Glmermdl)
+
+# could leave it out
+
+```
+
+
+
+
+### full model again with contrasts
+```{r}
+
+#new full model
+mdl_full <- glmer(correct ~ empty_set_quantifier*model + (1 | participant_id), 
+                  data = trimmed_data_exp2_judge, family = binomial(link = "logit"),
+                  glmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)))
+
+summary(mdl_full)
+
+contrasts(trimmed_data_exp2_judge$empty_set_quantifier)
+contrasts(trimmed_data_exp2_judge$model)
+
+```
+
+
+
+### picture RTs 
+### distribution Check (NB:Problem! negative resid_rt?? -also missing values?)
+
+```{r}
+shapiro.test(trimmed_data_exp2_judge$resid_rt)
+# nicht normalverteilt
+trimmed_data_exp2_judge$logResidRT <- log(trimmed_data_exp2_judge$resid_rt)
+#NaNs produced
+shapiro.test(trimmed_data_exp2_judge$logResidRT)
+#immer noch nicht normalverteilt
+
+plot(density(trimmed_data_exp2_judge$resid_rt))
+#plot(density(trimmed_data_exp2_judge$logResidRT))
+#!!!!Error in density.default(trimmed_data_exp2_judge$logResidRT) : 'x' contains missing values
+# logPictureRT closer to normality distribution
+
+```
+
+### full model
+```{r}
+lmerMdl_full <- lmer(logResidRT ~ empty_set_quantifier*model + (1 | participant_id) + (1|item),data = trimmed_data_exp2_judge, REML=F, lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)))
+
+```
+
+### multicollinearity check
+```{r}
+
+correlation_matrix(data = trimmed_data_exp2_judge,
+                   variables = c("empty_set_quantifier", "model", "participant_id", "item"))
+#no correlation
+check_collinearity(lmerMdl_full)
+
+col_lmerModel <- check_collinearity(lmerMdl_full)
+plot(col_lmerModel)
+
+```
+
+### check for best predictor
+```{r}
+predictor_competition(data = trimmed_data_exp2_judge,
+                      dependent = "logResidRT",
+                      independent1 = "empty_set_quantifier",
+                      independent2 = "model",
+                      random.intercept = "participant_id")
+
+
+# -> equally good
+
+# maybe redundant, because we include participant anyways
+
+lmerMdl_item <- lmer(logResidRT ~ 1 + (1|item), data = trimmed_data_exp2_judge, REML = F)
+
+lmerMdl_partcipant <- lmer(logResidRT ~ 1 + (1|participant_id), data = trimmed_data_exp2_judge, REML = F)
+
+anova(lmerMdl_item, lmerMdl_partcipant) 
+#equally good?
+
+# check whether item as random effect makes a difference
+nullLmermdl<-lmer(logResidRT~ (1|participant_id) + (1 |item), data = trimmed_data_exp2_judge, REML = FALSE)
+null2Lmermdl<-lmer(logResidRT~ (1|participant_id), data = trimmed_data_exp2_judge, REML = FALSE)
+anova(nullLmermdl, null2Lmermdl)
+
+# can leave item out
+```
+
+### check for best model
+```{r}
+#new model without item
+lmerMdl_full <- lmer(logResidRT ~ empty_set_quantifier*model + (1 | participant_id),data = trimmed_data_exp2_judge, REML=F, lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)))
+
+step(lmerMdl_full)
+# Model found:
+# logResidRT ~ empty_set_quantifier + model + (1 | participant_id)
+```
+
+
+### significance & predictor strength
+```{r}
+
+#continuing with best model
+
+lmerMdl_full <- lmer(logResidRT ~ empty_set_quantifier+model + (1 | participant_id),data = trimmed_data_exp2_judge, REML=F, lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)))
+anova(lmerMdl_full)
+
+#try whether interaction and random slope possible to include
+
+strength <- predictor_strength(dependent = "logResidRT",
+                   fixed = c("empty_set_quantifier", "model"),
+                   random_str = c("( 1 | participant_id)", "(1 | item)"),
+                   data = trimmed_data_exp2_judge)
+strength[order(strength$R2m),]
+
+#R2m -> marginal R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects
+# -> empty-set quantifier & quantifier_type best, followed by quantifier and lastly model
+
+#R2c -> conditional R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects + random effects
+# -> empty-set quantifier & quantifier_type best, followed by quantifier and lastly model
+
+#model better
+
+```
+
+### coefficients
+```{r}
+summary(lmerMdl_full)
+fixef(lmerMdl_full)
+ranef(lmerMdl_full)
+confint(lmerMdl_full)
+plogis(7.24059085)
+
+contrasts(trimmed_data_exp2_judge$empty_set_quantifier)
+contrasts(trimmed_data_exp2_judge$model)
+
+
+```
+
+### Tukey Contrasts
+# check whether levels of predictors are significantly different
+```{r}
+tukey(model = lmerMdl_full,
+      predictor = empty_set_quantifier)
+
+tukey(model = lmerMdl_full,
+      predictor = model)
+```
+
+
+
+
+### sentence RTs - inferential stats for penultimate and last region
+
+### data prep
+```{r}
+
+### move the conversion up?
+trimmed_data_exp2_read$empty_set_quantifier <- as.factor(trimmed_data_exp2_read$empty_set_quantifier)
+```
+
+
+
+```{r}
+# creating two data sets for the regions of interest
+roi4_data <- subset(trimmed_data_exp2_read, (roi == "rt_4_raw"))
+roi3_data <- subset(trimmed_data_exp2_read, (roi == "rt_3_raw"))
+```
+
+### distribution Check
+
+```{r}
+shapiro.test(roi4_data$rt)
+# not normally distributed
+roi4_data$logRt <- log(roi4_data$rt)
+shapiro.test(roi4_data$logRt)
+# not normally distributed
+
+
+shapiro.test(roi3_data$rt)
+# not normally distributed
+
+roi3_data$logRt <- log(roi3_data$rt)
+shapiro.test(roi3_data$logRt)
+# not normally distributed
+
+
+# no need for log
+```
+
+### full models
+```{r}
+roi4LmerMdl_full <- lmer(logRt ~ empty_set_quantifier + (empty_set_quantifier| participant_id) + (empty_set_quantifier| item),
+                  data = roi4_data, REML=F,
+                  lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)))
+
+roi3LmerMdl_full <- lmer(logRt ~ empty_set_quantifier + (empty_set_quantifier| participant_id) + (empty_set_quantifier| item),
+                  data = roi3_data, REML=F,
+                  lmerControl(optimizer="bobyqa", optCtrl = list(maxfun = 100000)))
+```
+
+
+### multicollinearity check
+## roi 4
+```{r}
+
+correlation_matrix(data = roi4_data,
+                   variables = c("empty_set_quantifier", "participant_id", "item"))
+#not correlated
+
+#check_collinearity(roi4LmerMdl_full)
+#Not enough model terms in the conditional part of the model to check for multicollinearity.NULL
+
+
+# roi4_col_model <- check_collinearity(roi4LmerMdl_full)
+# #Not enough model terms in the conditional part of the model to check for multicollinearity.NULL
+# 
+# plot(roi4_col_model)
+# #Not enough model terms in the conditional part of the model to check for multicollinearity.NULL
+
+```
+
+## roi 3
+```{r}
+
+correlation_matrix(data = roi3_data,
+                   variables = c("empty_set_quantifier", "participant_id", "item"))
+#not correlated
+
+
+# check_collinearity(roi3LmerMdl_full)
+# #Not enough model terms in the conditional part of the model to check for multicollinearity.NULL
+# 
+# 
+# roi3_col_model <- check_collinearity(roi3LmerMdl_full)
+# #Not enough model terms in the conditional part of the model to check for multicollinearity.NULL
+# plot(roi3_col_model)
+```
+
+
+### check for best predictor
+## roi4
+```{r}
+# maybe redundant, because we include participant anyways
+
+roi4_mdl_item <- lmer(logRt ~ 1 + (1|item), data = roi4_data, REML = F)
+
+roi4_mdl_partcipant <- lmer(logRt ~ 1 + (1|participant_id), data = roi4_data, REML = F)
+
+anova(roi4_mdl_item, roi4_mdl_partcipant)
+# equal?
+
+# check whether item as random effect makes a difference 
+nullLmermdl<-lmer(logRt~ (1|participant_id) + (1 |item), data = roi4_data, REML = FALSE)
+null2Lmermdl<-lmer(logRt ~ (1|participant_id), data = roi4_data, REML = FALSE)
+anova(nullLmermdl, null2Lmermdl)
+#should keep item
+```
+
+## roi3
+```{r}
+
+# maybe redundant, because we include participant anyways
+
+roi3_mdl_item <- lmer(logRt ~ 1 + (1|item), data = roi3_data, REML = F)
+
+roi3_mdl_partcipant <- lmer(logRt ~ 1 + (1|participant_id), data = roi3_data, REML = F)
+
+anova(roi3_mdl_item, roi3_mdl_partcipant)
+#equal?
+# check whether item as random effect makes a difference 
+nullLmermdl<-lmer(logRt~ (1|participant_id) + (1 |item), data = roi3_data, REML = FALSE)
+null2Lmermdl<-lmer(logRt ~ (1|participant_id), data = roi3_data, REML = FALSE)
+anova(nullLmermdl, null2Lmermdl)
+#could leave item out, but since we keep it for roi 4 -> leave it?
+```
+
+
+### check for best model
+```{r}
+step(roi4LmerMdl_full)
+#best model: logRt ~ (empty_set_quantifier | participant_id) + (1 | item)
+step(roi3LmerMdl_full)
+#best model: logRt ~ (1 | participant_id)
+```
+
+### significance & predictor strength
+## roi 4
+```{r}
+anova(roi4LmerMdl_full)
+
+strength <- predictor_strength(dependent = "logRt",
+                   fixed = c("empty_set_quantifier"),
+                   random_str = c("( 1 | participant_id)", "(1|item)"),
+                   data = roi4_data)
+strength[order(strength$R2m),]
+
+#R2m -> marginal R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects
+#R2c -> conditional R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects + random effects
+
+### coefficients
+
+summary(roi4LmerMdl_full)
+
+### Tukey Contrasts
+# check whether levels of predictors are significantly different
+
+
+tukey(model = roi4LmerMdl_full,
+      predictor = empty_set_quantifier)
+```
+
+## roi 3
+```{r}
+anova(roi3LmerMdl_full)
+
+strength <- predictor_strength(dependent = "logRt",
+                   fixed = c("empty_set_quantifier"),
+                   random_str = c("( 1 | participant_id)", "(1|item)"),
+                   data = roi3_data)
+strength[order(strength$R2m),]
+
+#R2m -> marginal R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects
+#R2c -> conditional R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects + random effects
+
+### coefficients
+
+summary(roi3LmerMdl_full)
+
+### Tukey Contrasts
+# check whether levels of predictors are significantly different
+
+
+tukey(model = roi3LmerMdl_full,
+      predictor = empty_set_quantifier)
+```
+

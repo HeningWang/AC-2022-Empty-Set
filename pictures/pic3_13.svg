@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="517pt" height="517pt" viewBox="0 0 517 517" version="1.1">
+<g id="surface221">
+<rect x="0" y="0" width="517" height="517" style="fill:rgb(90%,90%,90%);fill-opacity:1;stroke:none;"/>
+<path style="fill:none;stroke-width:5;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(100%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 5 5 L 261 5 L 261 261 L 5 261 Z M 5 5 "/>
+<path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 118.746094 58.089844 C 118.746094 74.65625 105.3125 88.089844 88.746094 88.089844 C 72.175781 88.089844 58.746094 74.65625 58.746094 58.089844 C 58.746094 41.519531 72.175781 28.089844 88.746094 28.089844 C 105.3125 28.089844 118.746094 41.519531 118.746094 58.089844 "/>
+<path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 69.722656 335.015625 C 69.722656 351.585938 56.292969 365.015625 39.722656 365.015625 C 23.15625 365.015625 9.722656 351.585938 9.722656 335.015625 C 9.722656 318.449219 23.15625 305.015625 39.722656 305.015625 C 56.292969 305.015625 69.722656 318.449219 69.722656 335.015625 "/>
+<path style="fill-rule:nonzero;fill:rgb(0%,0%,0%);fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 131.707031 417.5 C 131.707031 434.066406 118.277344 447.5 101.707031 447.5 C 85.136719 447.5 71.707031 434.066406 71.707031 417.5 C 71.707031 400.929688 85.136719 387.5 101.707031 387.5 C 118.277344 387.5 131.707031 400.929688 131.707031 417.5 "/>
+<path style="fill-rule:nonzero;fill:rgb(100%,7%,57%);fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:round;stroke:rgb(0%,0%,0%);stroke-opacity:1;stroke-miterlimit:10;" d="M 329.289062 378.605469 C 329.289062 395.171875 315.855469 408.605469 299.289062 408.605469 C 282.71875 408.605469 269.289062 395.171875 269.289062 378.605469 C 269.289062 362.035156 282.71875 348.605469 299.289062 348.605469 C 315.855469 348.605469 329.289062 362.035156 329.289062 378.605469 "/>
+</g>
+</svg>

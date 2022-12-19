@@ -1,0 +1,81 @@
+id,missed_break_one,missed_break_two,missed_break_three,time_in_minutes,language,asses,age,gender,comments,fluent
+62ed6f5030849,True,False,False,21.550666666666668,Deutsch,Yes,27,Female,"Manche der Formulierungen fand ich ein wenig verwirrend/irreführend, aber es kann sein, dass das so gewollt ist.",Yes
+62ed706657c44,False,False,False,23.58375,Deutsch,Yes,20,Female,,No
+62ed72a7a23fe,False,False,False,14.809216666666666,Deutsch,Yes,28,Male,,Yes
+62ed73ce440a2,True,False,False,18.156283333333334,"deutsch, kurdisch",Yes,19,Male,"Interessantes Experiment, hat mir Spaß bereitet! Zudem ist die Fortschritt-Anzeige unten links gut gewählt :)",Yes
+62ed764c47d68,False,False,False,25.227183333333333,Deutsch,Yes,18,Male,,Yes
+62ed837287332,False,False,False,15.19065,Deutsch,Yes,22,Other,,Yes
+62ed8b6dd2bac,False,False,True,28.487916666666667,Deutsch,Yes,22,Male,,Yes
+62ed8dafd7517,False,True,False,19.961683333333333,Deutsch,Yes,37,Female,,Yes
+62ed962bc51f0,False,False,False,87.92656666666667,Deutsch,Yes,28,Male,,Yes
+62ed97136512b,False,False,False,52.0521,deutsch,Yes,20,Male,,Yes
+62ee107bb43db,False,False,False,10.04235,Deutsch,Yes,22,Other,,Yes
+62ee1debd4b44,False,True,False,26.164816666666667,Deutsch,Yes,35,Male,,Yes
+62ee2353c7589,False,False,False,46.72838333333333,deutsch,Yes,35,Male,,Yes
+62ee24fd49ca3,False,False,False,34.5291,deutsch,Yes,33,Male,,Yes
+62ee35ffadc7b,False,False,False,20.005316666666666,deutsch,Yes,38,Female,Viel Erfolg!,No
+62ee7b54c1bc2,False,False,False,14.886883333333333,Deutsch,Yes,29,Female,,Yes
+62ee7c0f5b174,True,False,False,14.18485,Deutsch,Yes,19,Male,,Yes
+62ee7fc1e5370,False,False,False,30.520116666666667,Deutsch,Yes,22,Male,,Yes
+62ee802e2941d,False,True,False,15.69215,deutsch,Yes,25,Female,,Yes
+62ee849689993,False,False,False,32.52385,deutsch,Yes,18,Male,"leider wurden mir bei ungefähr 20 sätzen kein zugehöriges bild angezeigt, sondern nur eine weiße Fläche",Yes
+62ee87ecb05e1,False,False,False,14.284066666666666,Deutsch,Yes,38,Female,,Yes
+62ee8be4aa8ed,False,False,False,16.027783333333332,Deutsch,Yes,22,Female,,Yes
+62ee8d9eab16b,False,False,True,17.32885,Deutsch,Yes,35,Male,,Yes
+62ee8e27ae613,False,False,False,15.0026,Deutsch,Yes,26,Female,,Yes
+62ee92d9bb4dc,False,False,False,43.01173333333333,Deutsch,Yes,24,Male,,Yes
+62eeb1d948d25,False,True,False,13.443133333333334,deutsch,Yes,23,Female,,Yes
+62eeb75ef23de,False,False,False,21.042166666666667,deutsch,Yes,26,Female,,Yes
+62eeb8f341d6f,False,False,False,26.679883333333333,deutsch,Yes,27,Female,,Yes
+62eebc49d4b55,False,False,False,14.764766666666667,Deutsch,Yes,21,Male,,Yes
+62eebde9d77ab,False,False,False,17.896283333333333,Deutsch,Yes,22,Male,,No
+62eebe33adcbd,True,False,False,25.880933333333335,deutsch,Yes,24,Male,,No
+62eebe7abe1f8,False,False,False,23.091833333333334,deutsch,Yes,27,Male,"Teilweise fand ich es nicht ganz klar, wann der Satz die Farbe der markierten Form mit vorgab und wann nicht. Z.B. ""Außer dem markierten ist ein Kreis gelb."" bedeutet für mich, dass im markierten Bereich ein gelber Kreis sein muss... Vielleicht war das aber auch Teil des Experiments.",Yes
+62eebf0d56796,False,False,False,11.370333333333333,Deutsch,Yes,21,Male,,Yes
+62eebfc543bdb,False,False,False,34.788866666666664,Deutsch,Yes,29,Male,,Yes
+62eec7c71131d,False,True,True,15.92915,Deutsch,No,22,Male,,Yes
+62eec88b60aed,False,False,False,25.160383333333332,"Deutsch, Polnisch",Yes,28,Female,"Es gab Sätze die waren zwar nicht ganz falsch, aber sie als richtig/passt anzuklicken war schon manchmal eher widerwillig, da es keine effiziente Formulierung war. Man KÖNNTE es so sagen und es wäre nicht falsch, aber man SAGT es eigentlich präzise wie es ist. Sprache soll ja knapp und präzise sein und nicht möglichen Raum für 'mindestes' 'höchstens' etc lassen. Also hatte ich manchmal ok gesagt aber die Formulierung meistens mit nem grummeln gelten lassen.",Yes
+62eed4bdb8b52,False,True,False,17.155683333333332,Deutsch,Yes,21,Female,,Yes
+62eeddc7e8656,False,True,False,15.505633333333334,Deutsch,Yes,27,Female,,Yes
+62eefb82815b3,False,True,False,22.054883333333333,Deutsch,Yes,23,Female,,Yes
+62ef1079beb48,False,False,False,21.782366666666668,"Deutsch, Spanisch ",Yes,27,Female,,Yes
+62ef672d2565f,False,False,False,23.2575,Deutsch,Yes,21,Female,,Yes
+62ef73cc5219c,False,False,False,12.036183333333334,Deutsch,Yes,22,Female,,Yes
+62ef7bea3a634,False,False,False,17.550466666666665,Deutsch,Yes,22,Male,,Yes
+62ef818b125eb,False,False,False,25.109066666666667,deutsch,Yes,20,Female,"Meine Definiton von ""außer dem Markierten"" war, dass ich dieses bei den Aussagen nicht betrachtet habe und nur auf die äußeren geschaut habe",Yes
+62ef8abb59b95,False,False,False,18.1067,deutsch,Yes,29,Male,,Yes
+62ef9d97291c1,False,False,False,40.52665,Deutsch,Yes,21,Female,,Yes
+62efa047cfa34,False,False,False,24.815483333333333,Deutsch,Yes,25,Female,"Ich habe teilweise dunkle Farben schlecht unterscheiden können, gerade bei schwarz/braun und schwarz/lila. Ich hatte schon zu schnell gedrückt, bis ich gemerkt habe, dass es verschiedene Farben waren. Dann war ich mir auch noch über manche Begrifflichkeiten unsicher, z.B. bei dem Wort ""weitere"". Schließt ""weitere"" Formen nur dieselbe Farbe mit ein? Wenn es jetzt um ein weiteres orangenes Dreieck geht, muss das Dreieck im Kasten auch orange sein? Da war ich mir nicht wirklich sicher. Mindestens und höchstens habe ich auch manchmal falsch angewendet, dass ich sie im Zeitdruck verwechselt habe. Aber es war ein spaßiges und interessantes Experiment!",Yes
+62efb74083b90,False,False,True,24.201933333333333,Deutsch,Yes,,,,Yes
+62efbc7fbb8af,False,False,False,19.34175,Deutsch,Yes,23,Male,,Yes
+62efce6f290e0,False,True,True,15.275816666666667,deutsch,Yes,26,Female,,No
+62efda5021d5e,False,False,True,15.7053,DEUTSCH,Yes,20,Female,"Ich fand das Experiment sehr spannend, danke und noch einen schönen Tag. ",Yes
+62efdc0ee3bbb,False,False,False,16.429033333333333,Deutsch,Yes,22,Male,,No
+62efdf804cffe,False,True,False,14.785416666666666,Deutsch,Yes,24,Female,,Yes
+62eff3906e0eb,True,False,False,19.160766666666667,Deutsch,Yes,24,Male,Spreche zudem auch noch Ungarisch und Rumänisch fließend.,Yes
+62eff8392735b,True,False,False,36.41225,"Deutsch, Schweizerdeutsch",Yes,28,Male,"2-3 Antworten kamen verspätet, wegen kurzzeitigen Internetproblemen, aber 99% der Antworten waren gemäß der Aufgabenbeschreibung abgegeben.",Yes
+62f00a7211a1c,False,False,False,22.5224,Deutsch,Yes,26,Female,,Yes
+62f014830a0e9,False,True,False,18.05901666666667,Deutsch,Yes,21,Male,,Yes
+62f0164ab0f4b,False,False,False,29.68315,Türkisch,Yes,20,Male,,Yes
+62f02229b3eb1,False,False,False,17.47565,deutsch,Yes,28,Male,,Yes
+62f02a9b078f9,False,False,False,32.49536666666667,Deutsch,Yes,25,Female,,Yes
+62f0aceb08d48,False,False,False,28.575266666666668,deutsch,Yes,22,Female,,No
+62f0b63e1e1be,False,False,False,21.1201,deutsch,Yes,25,Male,,Yes
+62f0bdf7c58bc,True,False,True,29.299166666666668,Deutsch,Yes,24,Male,,Yes
+62f0bf269f1b0,False,True,False,36.72228333333333,Deutsch,Yes,22,Male,,Yes
+62f0bfcbaa13b,True,False,False,13.259983333333333,Deutsch,Yes,21,Female,,No
+62f109b663f64,False,False,False,26.6115,"deutsch, türkisch",Yes,28,Female,,Yes
+62f10bc5398af,False,False,False,19.537,Deutsch,Yes,24,Female,,Yes
+62f10d99dad53,False,False,False,17.492483333333332,Deutsch,Yes,19,Male,,Yes
+62f116739b2ff,False,False,True,21.316666666666666,Deutsch,Yes,19,Male,,Yes
+62f1588401e3a,False,False,False,16.8249,Deutsch,Yes,30,Male,,Yes
+62f15ab09c558,False,False,False,14.291416666666667,Deutsch,Yes,20,Female,,Yes
+62f15cbe68b06,False,False,False,11.868533333333334,Deutsch,Yes,28,Female,,Yes
+62f162058bdb4,False,False,False,13.84705,Deutsch,Yes,23,Female,,Yes
+62f16231cdcab,False,False,False,11.0783,Deutsch,Yes,20,Female,,Yes
+62f1efc4aecd6,False,False,True,18.297666666666668,Deutsch,Yes,20,Female,,Yes
+62f1ff42316b2,True,True,False,43.88135,deutsch,Yes,22,Male,,Yes
+62f213a295359,False,False,False,18.064766666666667,deutsch,Yes,29,Female,"Ich war mir nicht sicher, ob das ""außer"" die jeweilige Bedingung erfüllen muss oder nicht.",Yes
+62f2156e96c60,True,True,True,15.782,deutsch,Yes,23,Male,,Yes
+62f22b2d493ac,True,False,False,22.39705,deutsch,Yes,25,Male,,Yes
+62f24a5790734,False,False,False,37.41065,Deutsch,Yes,22,Female,"Mir ist aufgefallen, dass ich meine Meinung im Laufe des Experiments geändert habe. Am Anfang habe ich das Innere des markierten Bereichs mehr oder weniger ignoriert, wenn dort ""außer"" stand, aber im Laufe der Zeit dachte ich mir dann, dass es ja eher impliziert, dass das innere des Bereichs dem auch entsprechen muss. Zudem sind mir ab und an Leichtsinnsfehler passiert.",Yes

@@ -1,0 +1,700 @@
+---
+title: "Exp_1_inferential_stats"
+author: "Nadine Balbach"
+date: "9/1/2022"
+output: html_document
+---
+
+# Include relevant packages
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("devtools")
+# install.packages("cli")
+# library(cli)
+#devtools::install_github("dosc91/SfL", upgrade_dependencies = TRUE)
+# install.packages("cli")
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(trimr)
+library(lme4)
+library(lmerTest)
+#library(sjPlot)
+library(Rmisc)
+library(dplyr)
+library(ggbreak)
+library(reshape2)
+library(stringr)
+library(rlang)
+library(naniar)
+library(LMERConvenienceFunctions)
+library(betareg)
+#library(SfL)
+#library(performance)
+
+```
+
+## import functions, set plot directory, clear global environment
+```{r}
+rm(list=ls())
+#tiny bug concerning return value fixed in sdTrim from trimr
+#TODO: maybe use devtools
+source("sdTrimBugFixed.R")
+plots_dir<- file.path(getwd(),"plots")
+if(!dir.exists(plots_dir)) dir.create(plots_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+### load data
+```{r}
+load("trimmedData.RData")
+
+```
+
+### inferential statistics
+### judgements with logit mixed effect regression analysis (glmer - binomial logit - NB: step function not available!)
+
+## prep data
+```{r}
+trimmed_data_exp1_judge_excl_control$degree_quantifier <- as.factor(trimmed_data_exp1_judge_excl_control$degree_quantifier)
+trimmed_data_exp1_judge_excl_control$model_judge <- as.factor(trimmed_data_exp1_judge_excl_control$model_judge)
+trimmed_data_exp1_judge_excl_control$model <- as.factor(trimmed_data_exp1_judge_excl_control$model)
+trimmed_data_exp1_judge_excl_control$model <- relevel(trimmed_data_exp1_judge_excl_control$model, ref = "1-model")
+
+trimmed_data_exp1_judge_excl_control$empty_set_quantifier <- as.factor(trimmed_data_exp1_judge_excl_control$empty_set_quantifier)
+
+#contrasts
+contrasts(trimmed_data_exp1_judge_excl_control$empty_set_quantifier) =contr.sum(2)
+contrasts(trimmed_data_exp1_judge_excl_control$degree_quantifier) =contr.sum(2)
+contrasts(trimmed_data_exp1_judge_excl_control$model_judge) =contr.sum(2)
+contrasts(trimmed_data_exp1_judge_excl_control$model) =contr.sum(3)
+
+```
+
+### glmer analysis
+```{r}
+glmer_exp1_global <- glmer(correct ~ empty_set_quantifier*degree_quantifier*model_judge + (1 + model| participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_global)
+
+glmer_exp1_global_m0 <- glmer(correct ~ empty_set_quantifier*degree_quantifier+empty_set_quantifier*model_judge + degree_quantifier*model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+anova(glmer_exp1_global, glmer_exp1_global_m0)
+
+#three way-interaction significant
+```
+
+## break down three-way interaction effect: separate analyses for degree and non-degree quantifiers
+
+### subset data
+```{r}
+trimmed_data_exp1_judge_excl_control_degree <- subset(trimmed_data_exp1_judge_excl_control, degree_quantifier == "yes")
+
+trimmed_data_exp1_judge_excl_control_non_degree <- subset(trimmed_data_exp1_judge_excl_control, degree_quantifier == "no")
+
+```
+
+### glms degree / non-degree
+```{r}
+glmer_exp1_degree <- glmer(correct ~ empty_set_quantifier*model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_degree)
+
+#highly significant two-way interaction
+
+glmer_exp1_degree_m0 <- glmer(correct ~ empty_set_quantifier+model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_degree_m0)
+
+anova(glmer_exp1_degree,glmer_exp1_degree_m0)
+#m0 worse
+
+#non-degree
+glmer_exp1_non_degree <- glmer(correct ~ empty_set_quantifier*model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+summary(glmer_exp1_non_degree)
+#slightly significant two-way interaction only for non-degree
+
+glmer_exp1_non_degree_m0 <- glmer(correct ~ empty_set_quantifier+model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+
+anova(glmer_exp1_non_degree,glmer_exp1_non_degree_m0)
+# m0 slightly worse
+```
+
+## break down two-way interactions: seperate for empty-set vs. non-empty-set
+
+### subset data
+```{r}
+trimmed_data_exp1_judge_excl_control_degree_es <- subset(trimmed_data_exp1_judge_excl_control_degree, empty_set_quantifier == "yes")
+
+trimmed_data_exp1_judge_excl_control_degree_nes <- subset(trimmed_data_exp1_judge_excl_control_degree, empty_set_quantifier == "no")
+
+trimmed_data_exp1_judge_excl_control_non_degree_es <- subset(trimmed_data_exp1_judge_excl_control_non_degree, empty_set_quantifier == "yes")
+
+trimmed_data_exp1_judge_excl_control_non_degree_nes <- subset(trimmed_data_exp1_judge_excl_control_non_degree, empty_set_quantifier == "no")
+
+```
+
+### glmerss degree empty_set / non-empty-set
+```{r}
+
+#degree es (at most)
+glmer_exp1_degree_es <- glmer(correct ~ model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree_es, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_degree_es)
+#significant
+
+#degree nes (at least)
+
+glmer_exp1_degree_nes <- glmer(correct ~ model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree_nes, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_degree_nes)
+#significant 
+
+```
+
+### glmerss non-degree empty_set / non-empty-set
+```{r}
+
+#non-degree es (no)
+glmer_exp1_non_degree_es <- glmer(correct ~ model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree_es, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_non_degree_es)
+#not significant
+
+#non-degree nes (exactly one)
+
+glmer_exp1_non_degree_nes <- glmer(correct ~ model_judge + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree_nes, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
+
+summary(glmer_exp1_non_degree_nes)
+#slightly significant 
+
+```
+
+### multicollinearity check
+```{r}
+
+# correlation_matrix(data = trimmed_data_exp1_judge_excl_control,
+#                    variables = c("degree_quantifier", "empty_set_quantifier", "model", "participant_id", "item"))
+# -> no correlation
+
+# check_collinearity(glmer_exp1_global)
+# col_model <- check_collinearity(glmer_exp1_global)
+# plot(col_model)
+
+```
+
+
+
+### check for best random interecept
+```{r}
+
+# check whether item as random effect makes a difference
+nullGlmermdl<-glmer(correct~ (1|participant_id) + (1 |item), data = trimmed_data_exp1_judge_excl_control,family = binomial(link = "logit"))
+null2Glmermdl<-glmer(correct~ (1|participant_id), data = trimmed_data_exp1_judge_excl_control, family = binomial(link = "logit"))
+anova(nullGlmermdl, null2Glmermdl)
+
+# should keep item in random effects structure
+
+```
+
+
+
+
+
+
+
+## picture RTs 
+### distribution Check (NB: do we have to account for the missing values in resid_rt?)
+
+```{r}
+
+
+shapiro.test(trimmed_data_exp1_judge_excl_control$resid_rt)
+# nicht normalverteilt
+trimmed_data_exp1_judge_excl_control$logResidRT <- log(trimmed_data_exp1_judge_excl_control$resid_rt)
+shapiro.test(trimmed_data_exp1_judge_excl_control$logResidRT)
+#immer noch nicht normalverteilt
+
+plot(density(trimmed_data_exp1_judge_excl_control$resid_rt))
+#plot(density(trimmed_data_exp1_judge_excl_control$logResidRT))
+#Error in density.default(trimmed_data_exp1_judge_excl_control$logResidRT) : 'x' contains missing values
+
+```
+### check NA 
+There are negative value in residual RTs, because their responses are "no", and for "no" responses a part of rts will be subtracted. It can lead to negative values.
+```{r}
+na_index <- which(is.na(trimmed_data_exp1_judge_excl_control$logResidRT) == TRUE)
+trimmed_data_exp1_judge_excl_control[na_index,]
+
+plot(density(trimmed_data_exp1_judge_excl_control$logResidRT))
+```
+### ... and remove NAs
+```{r}
+trimmed_data_exp1_judge_excl_control <- trimmed_data_exp1_judge_excl_control %>% filter(!is.na(trimmed_data_exp1_judge_excl_control$logResidRT))
+plot(density(trimmed_data_exp1_judge_excl_control$logResidRT))
+# still not normal
+```
+
+### full model
+```{r}
+lmerMdl_full <- lmer(logResidRT ~ degree_quantifier*empty_set_quantifier*model + (1 + model| participant_id) + (1|item),data = trimmed_data_exp1_judge_excl_control, REML=F, lmerControl(optimizer="bobyqa"))
+
+```
+
+### multicollinearity check
+```{r}
+
+# correlation_matrix(data = trimmed_data_exp1_judge_excl_control,
+#                    variables = c("degree_quantifier", "empty_set_quantifier", "model", "participant_id", "item"))
+# no correlation
+
+# check_collinearity(lmerMdl_full)
+# 
+# col_lmerModel <- check_collinearity(lmerMdl_full)
+# plot(col_lmerModel)
+
+```
+
+# check whether item as random effect makes a difference
+```{r}
+
+nullLmermdl<-lmer(resid_rt~ (1|participant_id) + (1 |item), data = trimmed_data_exp1_judge_excl_control, REML = FALSE)
+null2Lmermdl<-lmer(resid_rt~ (1|participant_id), data = trimmed_data_exp1_judge_excl_control, REML = FALSE)
+anova(nullLmermdl, null2Lmermdl)
+
+# should keep item in random effects structure
+```
+
+### model comparision full vs remove three way interactiton
+```{r}
+lmerMdl_full_m1 <- update(lmerMdl_full, .~.-degree_quantifier:empty_set_quantifier:model)
+anova(lmerMdl_full_m1,lmerMdl_full)
+```
+
+### check for best model
+```{r}
+step(lmerMdl_full)
+#best model is full model: resid_rt ~ degree_quantifier * empty_set_quantifier * model + (1 | participant_id) + (1 | item)
+
+```
+
+
+### significance & predictor strength
+```{r}
+
+anova(lmerMdl_full)
+
+
+#try whether interaction and random slope possible to include
+# strength <- predictor_strength(dependent = "resid_rt",
+#                    fixed = c("degree_quantifier", "empty_set_quantifier", "model", "degree_quantifier:empty_set_quantifier", "empty_set_quantifier:model"),
+#                    random_str = c("( 1 | participant_id)", "(1 | item)"),
+#                    data = trimmed_data_exp1_judge_excl_control)
+# strength[order(strength$R2m),]
+
+#R2m -> marginal R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects
+# -> empty-set quantifier & degree_quantifier best, followed by quantifier and lastly model
+
+#R2c -> conditional R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects + random effects
+# -> empty-set quantifier & degree_quantifier best, followed by quantifier and lastly model
+
+```
+
+### summary
+```{r}
+
+contrasts(trimmed_data_exp1_judge_excl_control$model)
+summary(lmerMdl_full)
+
+## significant three way interecation, two highly sign. two-way interactions between empty-set quantifiers and models: 
+## empty-set quantifiers differ from non-empty-set quantifiers with respect 
+## to 1- and 2-models (note that 1 and two do not correspond to the respective models, but to the comparisons) and two-way interaction between degree-quantifier and empty-set-quantifier, degree-quantifiers differ from non-degree quantifiers with respect to emty-set quantifiers
+## no two-way interaction between degree-quantifier and model, but tendency for first comparison (1 vs. 0)
+
+# fixef(lmerMdl_full)
+# ranef(lmerMdl_full)
+# confint(lmerMdl_full)
+# plogis(7.06071514)
+
+```
+
+
+## break down three way interaction
+### lmers degree / non-degree
+```{r}
+
+lmer_exp1_degree <- lmer(resid_rt ~ empty_set_quantifier*model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree, REML=F, lmerControl(optimizer="bobyqa"))  
+
+
+
+summary(lmer_exp1_degree)
+step(lmer_exp1_degree)
+
+#highly significant two two-way interactions
+
+# lmer_exp1_degree_m0 <- lmer(resid_rt ~ empty_set_quantifier+model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree, REML=F, lmerControl(optimizer="bobyqa"))
+# 
+# summary(lmer_exp1_degree_m0)
+# 
+# anova(lmer_exp1_degree,lmer_exp1_degree_m0)
+#m0 worse
+
+#non-degree
+```
+### model comparison removing significant two way interaction between es quantifier and model in degree 
+```{r}
+lmer_exp1_degree_m1 <- update(lmer_exp1_degree , .~.-empty_set_quantifier:model)
+anova(lmer_exp1_degree_m1,lmer_exp1_degree )
+```
+
+
+### non degree
+```{r}
+lmer_exp1_non_degree <- lmer(resid_rt ~ empty_set_quantifier*model + (1+model|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree, REML=F, lmerControl(optimizer="bobyqa"))
+summary(lmer_exp1_non_degree)
+step(lmer_exp1_non_degree)
+anova(lmer_exp1_non_degree)
+#non-degree highly significant two-way interaction for second comparison of empty-set*model (empty-set=1, model=2 vs.1)
+
+lmer_exp1_non_degree_m0 <- lmer(resid_rt ~ empty_set_quantifier+model + (1+model|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree, REML=F, lmerControl(optimizer="bobyqa"))
+summary(lmer_exp1_non_degree_m0)
+
+anova(lmer_exp1_non_degree,lmer_exp1_non_degree_m0)
+# m0 worse
+```
+
+
+### lmers degree empty_set / non-empty-set
+```{r}
+
+#degree es (at most)
+
+lmer_exp1_degree_es <- lmer(resid_rt ~ model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree_es, REML=F, lmerControl(optimizer="bobyqa"))
+summary(lmer_exp1_degree_es)
+# model1 vs. 0 highly sign.
+#model  2 vs 1 high
+
+#degree nes (at least)
+
+lmer_exp1_degree_nes <- lmer(resid_rt ~ model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_degree_nes, REML=F, lmerControl(optimizer="bobyqa"))
+summary(lmer_exp1_degree_nes)
+#highly signif. for second model comparison (1 vs. 2)
+
+
+
+```
+
+### lmers non_degree empty_set / non-empty-set
+```{r}
+
+#non-degree es (no)
+
+lmer_exp1_non_degree_es <- lmer(resid_rt ~ model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree_es, REML=F, lmerControl(optimizer="bobyqa"))
+summary(lmer_exp1_non_degree_es)
+# highly signif. for both model comparisons ( 1 vs 0, 2 vs 1)
+
+
+#non-degree nes (exactly one)
+
+lmer_exp1_non_degree_nes <- lmer(resid_rt ~ model + (1|participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control_non_degree_nes, REML=F, lmerControl(optimizer="bobyqa"))
+summary(lmer_exp1_non_degree_nes)
+#model comparison 2 (1 vs 2) slightly significant 
+
+
+
+```
+
+
+## Tukey Contrasts
+### check whether levels of predictors are significantly different
+```{r}
+# tukey(model = lmerMdl_full,
+#       predictor = degree_quantifier)
+# 
+# tukey(model = lmerMdl_full,
+#       predictor = empty_set_quantifier)
+# 
+# tukey(model = lmerMdl_full,
+#       predictor = model)
+```
+
+
+
+
+# sentence RTs - inferential stats for penultimate and last region
+
+## data prep
+```{r}
+trimmed_data_exp1_read_excl_control$degree_quantifier <- as.factor(trimmed_data_exp1_read_excl_control$degree_quantifier)
+trimmed_data_exp1_read_excl_control$empty_set_quantifier <- as.factor(trimmed_data_exp1_read_excl_control$empty_set_quantifier)
+trimmed_data_exp1_read_excl_control$model <- as.factor(trimmed_data_exp1_read_excl_control$model)
+contrasts(trimmed_data_exp1_read_excl_control$empty_set_quantifier) =contr.sum(2)
+contrasts(trimmed_data_exp1_read_excl_control$degree_quantifier) =contr.sum(2)
+```
+
+
+
+```{r}
+# creating two data sets for the regions of interest
+roi6_data <- subset(trimmed_data_exp1_read_excl_control, (roi == "rt_6_raw"))
+roi5_data <- subset(trimmed_data_exp1_read_excl_control, (roi == "rt_5_raw"))
+```
+
+### distribution Check
+
+```{r}
+shapiro.test(roi6_data$rt)
+# not normally distributed
+roi6_data$logRt <- log(roi6_data$rt)
+shapiro.test(roi6_data$logRt)
+# not normally distributed
+
+
+shapiro.test(roi5_data$rt)
+# not normally distributed
+
+roi5_data$logRt <- log(roi5_data$rt)
+shapiro.test(roi5_data$logRt)
+# not normally distributed
+
+```
+
+### full models
+```{r}
+Roi6LmerMdl_full <- lmer(logRt ~ empty_set_quantifier*degree_quantifier + (1 | participant_id) + (1 | item),
+                  data = roi6_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+
+Roi5LmerMdl_full <- lmer(logRt ~ empty_set_quantifier*degree_quantifier + (1 | participant_id) + (1 | item),
+                  data = roi5_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+```
+
+
+### multicollinearity check
+## Roi 6
+```{r}
+
+# correlation_matrix(data = roi6_data,
+#                    variables = c("degree_quantifier", "empty_set_quantifier", "participant_id", "item"))
+#no correlation
+
+# check_collinearity(Roi6LmerMdl_full)
+# 
+# 
+# Roi6_col_model <- check_collinearity(Roi6LmerMdl_full)
+# plot(Roi6_col_model)
+
+```
+
+## Roi 5
+```{r}
+
+# correlation_matrix(data = roi5_data,
+#                    variables = c("degree_quantifier", "empty_set_quantifier", "participant_id", "item"))
+
+#no correlation
+
+# check_collinearity(Roi5LmerMdl_full)
+# 
+# 
+# Roi5_col_model <- check_collinearity(Roi5LmerMdl_full)
+# plot(Roi5_col_model)
+```
+
+
+### check for random intercept
+## roi6
+```{r}
+# check whether item as random effect makes a difference 
+nullLmermdl<-lmer(logRt~ (1|participant_id) + (1 |item), data = roi6_data, REML = FALSE)
+null2Lmermdl<-lmer(logRt ~ (1|participant_id), data = roi6_data, REML = FALSE)
+anova(nullLmermdl, null2Lmermdl)
+#-> could leave item out 
+```
+
+## roi5
+```{r}
+
+# check whether item as random effect makes a difference 
+nullLmermdl<-lmer(logRt~ (1|participant_id) + (1 |item), data = roi5_data, REML = FALSE)
+null2Lmermdl<-lmer(logRt ~ (1|participant_id), data = roi5_data, REML = FALSE)
+anova(nullLmermdl, null2Lmermdl)
+#-> could leave item out
+
+```
+
+### leave out item in random effect structure
+
+
+```{r}
+Roi6LmerMdl_full <- lmer(logRt ~ empty_set_quantifier*degree_quantifier + (1 | participant_id),
+                  data = roi6_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+
+Roi5LmerMdl_full <- lmer(logRt ~ empty_set_quantifier*degree_quantifier + (1 | participant_id),
+                  data = roi5_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+```
+
+### check for best model
+```{r}
+step(Roi6LmerMdl_full)
+#best model logRt ~ (1 | participant_id)
+```
+
+```{r}
+step(Roi5LmerMdl_full)
+# best model logRt ~ (1 | participant_id)
+
+#!!!there is a trend for the empty_set_quantifier though in both
+```
+
+### significance & predictor strength
+## roi 6
+```{r}
+anova(Roi6LmerMdl_full)
+
+# strength <- predictor_strength(dependent = "logRt",
+#                    fixed = c("degree_quantifier", "empty_set_quantifier"),
+#                    random_str = c("( 1 | participant_id)"),
+#                    data = roi6_data)
+# strength[order(strength$R2m),]
+
+# here for degree_quantifier 
+
+#R2m -> marginal R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects
+#R2c -> conditional R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects + random effects
+
+### coefficients
+
+summary(Roi6LmerMdl_full)
+
+### Tukey Contrasts
+# check whether levels of predictors are significantly different
+
+# tukey(model = Roi6LmerMdl_full,
+#       predictor = degree_quantifier)
+# #not good
+# 
+# tukey(model = Roi6LmerMdl_full,
+#       predictor = empty_set_quantifier)
+# 
+# #trend for empty_set quantifier
+```
+
+## roi 5
+```{r}
+anova(Roi5LmerMdl_full)
+
+# strength <- predictor_strength(dependent = "logRt",
+#                    fixed = c("degree_quantifier", "empty_set_quantifier"),
+#                    random_str = c("( 1 | participant_id)"),
+#                    data = roi5_data)
+# strength[order(strength$R2m),]
+
+#R2m -> marginal R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects
+#R2c -> conditional R-squared value - the higher the more variance is explained by the model and it's predictors in regard to the fixed effects + random effects
+
+#degree_quantifier better
+
+### coefficients
+
+summary(Roi5LmerMdl_full)
+
+### Tukey Contrasts
+# check whether levels of predictors are significantly different
+
+# tukey(model = Roi5LmerMdl_full,
+#       predictor = degree_quantifier)
+# #nothing
+# 
+# tukey(model = Roi5LmerMdl_full,
+#       predictor = empty_set_quantifier)
+
+#trend for emty-set quantifier
+```
+
+#better models?
+
+```{r}
+Roi6LmerMdl_full <- lmer(logRt ~ empty_set_quantifier+degree_quantifier + (1 | participant_id),
+                  data = roi6_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+summary(Roi6LmerMdl_full)
+
+#trend for empty_set quantifier
+
+Roi5LmerMdl_full <- lmer(logRt ~ empty_set_quantifier+degree_quantifier + (1 | participant_id),
+                  data = roi5_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+summary(Roi5LmerMdl_full)
+
+#trend for empty_set quantifier
+
+Roi6LmerMdl_full2 <- lmer(logRt ~ empty_set_quantifier + (1 | participant_id),
+                  data = roi6_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+summary(Roi6LmerMdl_full2)
+#trend for empty_set quantifier
+
+Roi5LmerMdl_full2 <- lmer(logRt ~ empty_set_quantifier + (1 | participant_id),
+                  data = roi5_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+summary(Roi5LmerMdl_full2)
+#trend for empty_set quantifier
+
+Roi6LmerMdl_full3 <- lmer(logRt ~ degree_quantifier + (1 | participant_id),
+                  data = roi6_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+summary(Roi6LmerMdl_full3)
+#nothing
+
+Roi5LmerMdl_full3 <- lmer(logRt ~ degree_quantifier + (1 | participant_id),
+                  data = roi5_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+summary(Roi5LmerMdl_full3)
+#nothing
+
+Roi5LmerMdl_null <- lmer(logRt ~ (1 | participant_id),
+                  data = roi5_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+summary(Roi5LmerMdl_null)
+
+Roi6LmerMdl_null <- lmer(logRt ~ (1 | participant_id),
+                  data = roi6_data, REML=F,
+                  lmerControl(optimizer="bobyqa"))
+summary(Roi5LmerMdl_null)
+
+anova(Roi6LmerMdl_full, Roi6LmerMdl_full2)
+anova(Roi6LmerMdl_full2, Roi6LmerMdl_null)
+#-> lmer-model with empty-set quantifier slightly better
+
+anova(Roi5LmerMdl_full, Roi5LmerMdl_full2)
+anova(Roi5LmerMdl_full2, Roi5LmerMdl_null)
+#-> lmer-model with empty-set quantifier slightly better
+
+#there only seems to be a trend for the factor empty_set_quantifier for both regions
+
+```
+# check random structures
+```{r}
+lmerMdl_full <- lmer(log(resid_rt) ~ degree_quantifier*empty_set_quantifier*model + (1 | participant_id) + (1|item),data = trimmed_data_exp1_judge_excl_control, REML=F, lmerControl(optimizer="bobyqa"))
+
+# use this model as the best model
+lmerMdl_full_1 <- update(lmerMdl_full, .~.- (1| participant_id) - (1| item)+ (1 + model| participant_id)+(1 + model|item))
+
+```
+add random slope for model
+```{r}
+lmerMdl_full_1 <- update(lmerMdl_full, .~.- (1| participant_id) - (1| item)+ (1 + model| participant_id)+(1 + model|item))
+anova(lmerMdl_full,lmerMdl_full_1)
+step(lmerMdl_full_1)
+```
+```{r}
+lmerMdl_best <- lmer(log(resid_rt) ~ degree_quantifier*empty_set_quantifier*model + (1 + model| participant_id) + (1|item),data = trimmed_data_exp1_judge_excl_control, REML=F, lmerControl(optimizer="bobyqa"))
+lmerMdl_best_1 <- update(lmerMdl_best, .~.-degree_quantifier:empty_set_quantifier:model)
+anova(lmerMdl_best,lmerMdl_best_1)
+```
+
+
