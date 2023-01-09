@@ -70,6 +70,25 @@ contrasts(trimmed_data_exp1_judge_excl_control$model) =contr.sum(3)
 
 ```
 
+## check random structures
+```{r}
+lmerMdl_full <- lmer(log(resid_rt) ~ degree_quantifier*empty_set_quantifier*model + (1 | participant_id) + (1|item),data = trimmed_data_exp1_judge_excl_control, REML=F, lmerControl(optimizer="bobyqa"))
+
+# use this model as the best model for inferential stat
+lmerMdl_full_1 <- update(lmerMdl_full, .~.- (1| participant_id) - (1| item)+ (1 + model| participant_id)+(1 + model|item))
+
+```
+add random slope for model - led to either no significant model fitting or no convergence
+```{r}
+lmerMdl_full_1 <- update(lmerMdl_full, .~.- (1| participant_id) - (1| item)+ (1 + model| participant_id)+(1 + model|item))
+anova(lmerMdl_full,lmerMdl_full_1)
+step(lmerMdl_full_1)
+```
+```{r}
+lmerMdl_best <- lmer(log(resid_rt) ~ degree_quantifier*empty_set_quantifier*model + (1 + model| participant_id) + (1|item),data = trimmed_data_exp1_judge_excl_control, REML=F, lmerControl(optimizer="bobyqa"))
+lmerMdl_best_1 <- update(lmerMdl_best, .~.-degree_quantifier:empty_set_quantifier:model)
+anova(lmerMdl_best,lmerMdl_best_1)
+```
 ### glmer analysis
 ```{r}
 glmer_exp1_global <- glmer(correct ~ empty_set_quantifier*degree_quantifier*model_judge + (1 + model| participant_id) + (1|item), data = trimmed_data_exp1_judge_excl_control, family = binomial(link = "logit"), control = glmerControl(optimizer="bobyqa"))
@@ -677,24 +696,6 @@ anova(Roi5LmerMdl_full2, Roi5LmerMdl_null)
 #there only seems to be a trend for the factor empty_set_quantifier for both regions
 
 ```
-# check random structures
-```{r}
-lmerMdl_full <- lmer(log(resid_rt) ~ degree_quantifier*empty_set_quantifier*model + (1 | participant_id) + (1|item),data = trimmed_data_exp1_judge_excl_control, REML=F, lmerControl(optimizer="bobyqa"))
 
-# use this model as the best model
-lmerMdl_full_1 <- update(lmerMdl_full, .~.- (1| participant_id) - (1| item)+ (1 + model| participant_id)+(1 + model|item))
-
-```
-add random slope for model
-```{r}
-lmerMdl_full_1 <- update(lmerMdl_full, .~.- (1| participant_id) - (1| item)+ (1 + model| participant_id)+(1 + model|item))
-anova(lmerMdl_full,lmerMdl_full_1)
-step(lmerMdl_full_1)
-```
-```{r}
-lmerMdl_best <- lmer(log(resid_rt) ~ degree_quantifier*empty_set_quantifier*model + (1 + model| participant_id) + (1|item),data = trimmed_data_exp1_judge_excl_control, REML=F, lmerControl(optimizer="bobyqa"))
-lmerMdl_best_1 <- update(lmerMdl_best, .~.-degree_quantifier:empty_set_quantifier:model)
-anova(lmerMdl_best,lmerMdl_best_1)
-```
 
 
